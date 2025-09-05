@@ -7,16 +7,31 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   preload() {
+    // ✅ Don't include /public — everything inside public/ is served from root
+    this.load.image("background", "/assets/steptodown.com169408.jpg");
     this.load.image("player", "https://labs.phaser.io/assets/sprites/phaser-dude.png");
   }
 
   create() {
     this.socket = io("http://localhost:3001");
 
+    // ✅ background
+    this.background = this.add.image(0, 0, "background").setOrigin(0, 0);
+    this.background.setDisplaySize(1920, 1080);
+
+    // ✅ world + camera bounds
+    this.cameras.main.setBounds(0, 0, this.background.displayWidth, this.background.displayHeight);
+    this.physics.world.setBounds(0, 0, this.background.displayWidth, this.background.displayHeight);
+
     this.players = {}; // store other players
 
-    // spawn local player
+    // ✅ spawn local player
     this.player = this.add.sprite(400, 300, "player");
+
+    // ✅ camera follows local player
+    this.cameras.main.startFollow(this.player);
+
+    // input
     this.cursors = this.input.keyboard.createCursorKeys();
 
     // listen for all players
@@ -54,7 +69,8 @@ export default class WorldScene extends Phaser.Scene {
     const speed = 200;
     const delta = this.game.loop.delta / 1000;
 
-    let dx = 0, dy = 0;
+    let dx = 0,
+      dy = 0;
     if (this.cursors.left.isDown) dx = -1;
     if (this.cursors.right.isDown) dx = 1;
     if (this.cursors.up.isDown) dy = -1;

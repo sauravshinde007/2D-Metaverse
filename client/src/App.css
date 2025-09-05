@@ -1,42 +1,49 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* reset */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* no scrollbars */
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* App: game + chat side by side */
+.app-root {
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+
+/* Add this to ensure proper container behavior */
+.game-container {
+  position: absolute;
+  inset: 0; /* top:0, right:0, bottom:0, left:0 */
+}
+
+canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.hud-root {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10; /* ✅ on top of Phaser canvas */
+  background: rgba(0,0,0,0.5); /* optional for readability */
+  padding: 10px;
+  border-radius: 8px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  .chat-sidebar {
+    width: 280px;
+    flex: 0 0 280px;
   }
-  to {
-    transform: rotate(360deg);
+}
+@media (max-width: 600px) {
+  .chat-sidebar {
+    display: none; /* hide chat on very small screens */
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

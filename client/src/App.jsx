@@ -1,25 +1,32 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { useEffect } from "react";
+import "./App.css";
 import startGame from "./phaser";
-import HUD from './components/HUD';
+import HUD from "./components/HUD";
 
 function App() {
   useEffect(() => {
+    if (window._phaserGame) return;
     const game = startGame();
-    return () => game.destroy(true);
+    window._phaserGame = game;
+
+    return () => {
+      if (window._phaserGame) {
+        window._phaserGame.destroy(true);
+        window._phaserGame = null;
+      }
+    };
   }, []);
 
   return (
-    <>
-      <div className="w-screen h-screen relative">
-      {/* Phaser canvas */}
-      <div id="game-container" className="w-full h-full" />
+    <div className="app-root">
+      {/* Game fills available space */}
+      <div id="game-container" className="game-container" />
 
-      {/* React overlay HUD */}
-      <HUD />
+     <div className="hud-root">
+        <HUD />
     </div>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
