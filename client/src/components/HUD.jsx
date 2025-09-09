@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// components/HUD.jsx
+import { useEffect, useState, useRef } from "react";
 import { StreamChat } from "stream-chat";
 import {
   Chat,
@@ -16,14 +17,14 @@ export default function HUD() {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [chatFocused, setChatFocused] = useState(false);
+  const chatContainerRef = useRef(null);
 
   useEffect(() => {
     const client = StreamChat.getInstance(apiKey);
 
     async function init() {
-      // ✅ Prevent reconnect if already connected
       if (client.userID) {
-        console.log("StreamChat: already connected as", client.userID);
         setChatClient(client);
         return;
       }
@@ -59,45 +60,116 @@ export default function HUD() {
     setOnlineCount(online.length);
   };
 
-  // ✅ Fix: Disable Phaser keyboard input while typing in chat
+  // Handle chat focus
   useEffect(() => {
-    const toggleKeyboard = (enabled) => {
-      if (window.game?.input?.keyboard) {
-        window.game.input.keyboard.enabled = enabled;
+    const handleChatClick = (e) => {
+      // Only focus if we're not already focused
+      if (!chatFocused) {
+        setChatFocused(true);
+        window.dispatchEvent(new CustomEvent('chat-focus-change', {
+          detail: { focused: true }
+        }));
       }
     };
 
-    const handleFocus = () => toggleKeyboard(false);
-    const handleBlur = () => toggleKeyboard(true);
+    const handleInputFocus = () => {
+      if (!chatFocused) {
+        setChatFocused(true);
+        window.dispatchEvent(new CustomEvent('chat-focus-change', {
+          detail: { focused: true }
+        }));
+      }
+    };
 
-    const chatInputs = document.querySelectorAll("input, textarea");
+    const handleInputBlur = () => {
+      // Don't automatically blur when switching between chat inputs
+      // Let the user explicitly click on the game to blur
+    };
 
-    chatInputs.forEach((input) => {
-      input.addEventListener("focus", handleFocus);
-      input.addEventListener("blur", handleBlur);
-    });
+    const chatContainer = chatContainerRef.current;
+    if (chatContainer) {
+      chatContainer.addEventListener('click', handleChatClick);
+    }
+
+    // Set up interval to check for chat inputs
+    const inputCheckInterval = setInterval(() => {
+      const chatInputs = document.querySelectorAll(
+        ".str-chat__textarea textarea, .str-chat__input--textarea textarea, input[type='text']"
+      );
+      
+      chatInputs.forEach((input) => {
+        if (!input.hasFocusListeners) {
+          input.addEventListener('focus', handleInputFocus);
+          input.addEventListener('blur', handleInputBlur);
+          input.hasFocusListeners = true;
+        }
+      });
+    }, 500);
 
     return () => {
+      if (chatContainer) {
+        chatContainer.removeEventListener('click', handleChatClick);
+      }
+      
+      clearInterval(inputCheckInterval);
+      
+      // Clean up listeners
+      const chatInputs = document.querySelectorAll(
+        ".str-chat__textarea textarea, .str-chat__input--textarea textarea, input[type='text']"
+      );
+      
       chatInputs.forEach((input) => {
-        input.removeEventListener("focus", handleFocus);
-        input.removeEventListener("blur", handleBlur);
+        input.removeEventListener('focus', handleInputFocus);
+        input.removeEventListener('blur', handleInputBlur);
+        input.hasFocusListeners = false;
       });
     };
-  }, [channel]);
+  }, [chatFocused]);
 
-  if (!chatClient || !channel) return null;
+  if (!chatClient || !channel) {
+    return (
+      <div className="absolute bottom-4 right-4 w-96 h-[500px] rounded-xl shadow-lg border bg-white/95 flex items-center justify-center text-gray-500">
+        Connecting chat…
+      </div>
+    );
+  }
 
   return (
     <div
-      className="absolute bottom-4 right-4 w-96 h-[500px] rounded-xl shadow-lg border bg-white/95 overflow-hidden flex flex-col"
-      style={{ zIndex: 50 }} // ✅ keeps it above Phaser canvas
+      ref={chatContainerRef}
+      className="absolute bottom-4 right-4 w-96 h-[500px] rounded-xl shadow-lg border bg-white/95 overflow-hidden flex flex-col transition-all duration-300"
+      style={{ 
+        zIndex: 100, // Higher z-index to ensure it's above the game overlay
+        boxShadow: chatFocused ? '0 0 0 3px rgba(99, 102, 241, 0.5)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        transform: chatFocused ? 'scale(1.02)' : 'scale(1)'
+      }}
     >
+      {/* Focus indicator */}
+      {chatFocused && (
+        <div className="absolute inset-0 border-2 border-indigo-500 rounded-xl pointer-events-none animate-pulse"></div>
+      )}
+      
+      {/* Status message */}
+      {chatFocused && (
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-indigo-500 text-white text-xs px-2 py-1 rounded-md">
+          Chat focused - Click game to return
+        </div>
+      )}
+      
       <Chat client={chatClient} theme="str-chat__theme-light">
         <Channel channel={channel}>
           <Window>
-            {/* Header */}
-            <div className="p-3 border-b bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold flex justify-between items-center">
-              <span>💬 Metaverse Lobby</span>
+            {/* Header with focus indicator */}
+            <div 
+              className="p-3 border-b bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold flex justify-between items-center transition-colors duration-300"
+              style={{ 
+                backgroundColor: chatFocused ? 'rgba(99, 102, 241, 0.9)' : '' 
+              }}
+            >
+              <span className="flex items-center">
+                💬 Metaverse Lobby 
+                {chatFocused && <span className="ml-2 text-xs font-normal">(Focused)</span>}
+              </span>
               <span className="text-sm">{onlineCount} online</span>
             </div>
 
@@ -108,7 +180,7 @@ export default function HUD() {
 
             {/* Input */}
             <div className="border-t bg-white">
-              <MessageInput focus />
+              <MessageInput focus={chatFocused} />
             </div>
           </Window>
           <Thread />

@@ -22,7 +22,7 @@ export default function startGame() {
     width: window.innerWidth,
     height: window.innerHeight,
     scale: {
-      mode: Phaser.Scale.RESIZE, // 👈 RESIZE is correct for full window scaling
+      mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     physics: {
