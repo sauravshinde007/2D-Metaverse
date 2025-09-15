@@ -63,8 +63,13 @@ export default class WorldScene extends Phaser.Scene {
         // when a new player moves
         this.socket.on("playerMoved", ({ id, pos }) => {
             if (this.players[id]) {
-                this.players[id].x = pos.x;
-                this.players[id].y = pos.y;
+                this.tweens.add({
+                    targets: this.players[id],
+                    x: pos.x,
+                    y: pos.y,
+                    duration: 120, // ms, match with your update interval (100ms)
+                    ease: "Linear"
+                });
             }
         });
 

@@ -41,6 +41,7 @@ export default function HUD() {
       });
 
       await channel.watch({ presence: true });
+
       updateOnlineCount(channel);
 
       setChatClient(client);

@@ -44,6 +44,17 @@ app.get("/get-token/:userId", async (req, res) => {
   res.json({ token });
 });
 
+app.get("/truncate", async (req, res) => {
+  try {
+    const channel = serverClient.channel("messaging", "metaverse-room");
+    await channel.truncate(); // clears all messages
+    res.json({ success: true, message: "Chat history cleared!" });
+  } catch (err) {
+    console.error("Error truncating channel:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 io.on("connection", (socket) => {
   console.log("New connection:", socket.id);
 
