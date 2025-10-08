@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import WorldScene from "./scenes/World";
+import TestScene from "./scenes/Test";
 
 export default function startGame() {
   const container = document.getElementById("game-container");

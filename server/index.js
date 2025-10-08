@@ -17,12 +17,11 @@ const serverClient = StreamChat.getInstance(
     process.env.STREAM_API_SECRET
 );
 
-
 const io = new Server(server, {
   cors: { origin: "*" }, // allow frontend dev
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
 let players = {}; // store connected players
 
@@ -58,14 +57,37 @@ app.get("/truncate", async (req, res) => {
 io.on("connection", (socket) => {
   console.log("New connection:", socket.id);
 
-  // add new player
-  players[socket.id] = { x: 400, y: 300 };
-  io.emit("players", players);
+  // add new player with default animation state
+  players[socket.id] = { 
+    x: 400, 
+    y: 300,
+    anim: "idle-down" // Add default animation
+  };
+  
+  // Send all existing players to the new player
+  socket.emit("players", players);
+  
+  // Notify other players about the new player
+  socket.broadcast.emit("playerJoined", {
+    id: socket.id,
+    ...players[socket.id]
+  });
 
-  // movement updates
-  socket.on("move", (pos) => {
-    players[socket.id] = pos;
-    socket.broadcast.emit("playerMoved", { id: socket.id, pos });
+  // movement updates with animation
+  socket.on("move", (data) => {
+    if (players[socket.id]) {
+      // Update player position and animation
+      players[socket.id].x = data.x;
+      players[socket.id].y = data.y;
+      players[socket.id].anim = data.anim; // Store animation state
+      
+      // Broadcast position AND animation to other players
+      socket.broadcast.emit("playerMoved", {
+        id: socket.id,
+        pos: { x: data.x, y: data.y },
+        anim: data.anim // Include animation data
+      });
+    }
   });
 
   // disconnect
@@ -75,7 +97,6 @@ io.on("connection", (socket) => {
     io.emit("playerLeft", socket.id);
   });
 });
-
 
 server.listen(PORT, () => {
   console.log("✅ Server running on PORT " + PORT);

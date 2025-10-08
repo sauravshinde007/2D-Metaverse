@@ -12,6 +12,7 @@ import {
 import "stream-chat-react/dist/css/v2/index.css";
 
 const apiKey = import.meta.env.VITE_STREAM_API_KEY;
+const socketServerUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
 
 export default function HUD() {
   const [chatClient, setChatClient] = useState(null);
@@ -30,7 +31,7 @@ export default function HUD() {
       }
 
       const userId = "user_" + Math.floor(Math.random() * 1000);
-      const res = await fetch(`http://localhost:3001/get-token/${userId}`);
+      const res = await fetch(`${socketServerUrl}/get-token/${userId}`);
       const data = await res.json();
 
       await client.connectUser({ id: userId, name: userId }, data.token);
