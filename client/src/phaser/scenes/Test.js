@@ -13,6 +13,9 @@ export default class TestScene extends Phaser.Scene {
             frameHeight: 48
         });
 
+        //test-map images
+        this.load.image("tiles", "/assets/map/Room_Builder_free_32x32.png");
+
         // (Optional) load background
         this.load.image("background", "/assets/steptodown.com169408.jpg");
     }
