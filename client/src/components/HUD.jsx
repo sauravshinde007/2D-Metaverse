@@ -19,6 +19,7 @@ export default function HUD() {
   const [channel, setChannel] = useState(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const [chatFocused, setChatFocused] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
@@ -62,11 +63,21 @@ export default function HUD() {
     setOnlineCount(online.length);
   };
 
-  // Handle chat focus
+  // Handle chat focus and click outside detection
   useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (chatContainerRef.current && !chatContainerRef.current.contains(event.target)) {
+        if (chatFocused) {
+          setChatFocused(false);
+          window.dispatchEvent(new CustomEvent('chat-focus-change', {
+            detail: { focused: false }
+          }));
+        }
+      }
+    };
+
     const handleChatClick = (e) => {
-      // Only focus if we're not already focused
-      if (!chatFocused) {
+      if (!chatFocused && chatContainerRef.current && chatContainerRef.current.contains(e.target)) {
         setChatFocused(true);
         window.dispatchEvent(new CustomEvent('chat-focus-change', {
           detail: { focused: true }
@@ -83,17 +94,13 @@ export default function HUD() {
       }
     };
 
-    const handleInputBlur = () => {
-      // Don't automatically blur when switching between chat inputs
-      // Let the user explicitly click on the game to blur
-    };
+    document.addEventListener('mousedown', handleClickOutside);
 
     const chatContainer = chatContainerRef.current;
     if (chatContainer) {
       chatContainer.addEventListener('click', handleChatClick);
     }
 
-    // Set up interval to check for chat inputs
     const inputCheckInterval = setInterval(() => {
       const chatInputs = document.querySelectorAll(
         ".str-chat__textarea textarea, .str-chat__input--textarea textarea, input[type='text']"
@@ -102,36 +109,49 @@ export default function HUD() {
       chatInputs.forEach((input) => {
         if (!input.hasFocusListeners) {
           input.addEventListener('focus', handleInputFocus);
-          input.addEventListener('blur', handleInputBlur);
           input.hasFocusListeners = true;
         }
       });
     }, 500);
 
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      
       if (chatContainer) {
         chatContainer.removeEventListener('click', handleChatClick);
       }
       
       clearInterval(inputCheckInterval);
       
-      // Clean up listeners
       const chatInputs = document.querySelectorAll(
         ".str-chat__textarea textarea, .str-chat__input--textarea textarea, input[type='text']"
       );
       
       chatInputs.forEach((input) => {
         input.removeEventListener('focus', handleInputFocus);
-        input.removeEventListener('blur', handleInputBlur);
         input.hasFocusListeners = false;
       });
     };
   }, [chatFocused]);
 
+  const toggleMinimize = (e) => {
+    e.stopPropagation();
+    setIsMinimized(!isMinimized);
+    if (!isMinimized) {
+      setChatFocused(false);
+      window.dispatchEvent(new CustomEvent('chat-focus-change', {
+        detail: { focused: false }
+      }));
+    }
+  };
+
   if (!chatClient || !channel) {
     return (
-      <div className="absolute bottom-4 right-4 w-96 h-[500px] rounded-xl shadow-lg border bg-white/95 flex items-center justify-center text-gray-500">
-        Connecting chat…
+      <div className="absolute bottom-4 right-4 w-[400px] h-[56px] rounded-lg shadow-xl bg-white flex items-center justify-center text-gray-500 border border-gray-200" style={{ zIndex: 100 }}>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-sm font-medium">Connecting...</span>
+        </div>
       </div>
     );
   }
@@ -139,55 +159,273 @@ export default function HUD() {
   return (
     <div
       ref={chatContainerRef}
-      className="absolute bottom-4 right-4 w-96 h-[500px] rounded-xl shadow-lg border bg-white/95 overflow-hidden flex flex-col transition-all duration-300"
+      className="absolute bottom-4 right-4 w-[400px] rounded-lg shadow-2xl bg-white border border-gray-200 transition-all duration-300 ease-in-out"
       style={{ 
-        zIndex: 100, // Higher z-index to ensure it's above the game overlay
-        boxShadow: chatFocused ? '0 0 0 3px rgba(99, 102, 241, 0.5)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        transform: chatFocused ? 'scale(1.02)' : 'scale(1)'
+        height: isMinimized ? '56px' : '600px',
+        zIndex: 100,
       }}
     >
-      {/* Focus indicator */}
-      {chatFocused && (
-        <div className="absolute inset-0 border-2 border-indigo-500 rounded-xl pointer-events-none animate-pulse"></div>
-      )}
-      
-      {/* Status message */}
-      {chatFocused && (
-        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-indigo-500 text-white text-xs px-2 py-1 rounded-md">
-          Chat focused - Click game to return
+      {/* Custom Header - ALWAYS VISIBLE */}
+      <div 
+        className="flex items-center justify-between px-4 py-3 bg-white flex-shrink-0 rounded-t-lg"
+        style={{ 
+          height: '56px',
+          borderBottom: isMinimized ? 'none' : '1px solid #E5E7EB',
+          position: 'relative',
+          zIndex: 10000,
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-black">Chatting</h3>
+          <span className="text-xs text-gray-500">• {onlineCount} online</span>
         </div>
-      )}
-      
-      <Chat client={chatClient} theme="str-chat__theme-light">
-        <Channel channel={channel}>
-          <Window>
-            {/* Header with focus indicator */}
+
+        {/* Minimize/Maximize Button */}
+        <button
+          onClick={toggleMinimize}
+          className="w-8 h-8 rounded-md hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center text-gray-500 hover:text-gray-700"
+          title={isMinimized ? "Maximize" : "Minimize"}
+        >
+          {isMinimized ? (
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor" 
+              strokeWidth={2}
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M5 15l7-7 7 7" 
+              />
+            </svg>
+          ) : (
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor" 
+              strokeWidth={2}
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M19 9l-7 7-7-7" 
+              />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* Chat Body Container - Hidden when minimized */}
+      {!isMinimized && (
+        <>
+          {/* Focus Indicator */}
+          {chatFocused && (
             <div 
-              className="p-3 border-b bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold flex justify-between items-center transition-colors duration-300"
+              className="bg-indigo-600 text-white text-xs px-3 py-2 text-center animate-slide-down"
               style={{ 
-                backgroundColor: chatFocused ? 'rgba(99, 102, 241, 0.9)' : '' 
+                borderTop: '1px solid rgba(255, 255, 255, 0.2)'
               }}
             >
-              <span className="flex items-center">
-                💬 Metaverse Lobby 
-                {chatFocused && <span className="ml-2 text-xs font-normal">(Focused)</span>}
-              </span>
-              <span className="text-sm">{onlineCount} online</span>
+              💬 Chat focused • Click outside to exit
             </div>
+          )}
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto bg-gray-50">
-              <MessageList />
-            </div>
+          {/* Stream Chat Container */}
+          <div 
+            style={{ 
+              height: chatFocused ? 'calc(544px - 36px)' : '544px',
+              overflow: 'hidden',
+            }}
+          >
+            <Chat client={chatClient} theme="str-chat__theme-light">
+              <Channel channel={channel}>
+                <Window hideOnThread>
+                  {/* Messages Area */}
+                  <div 
+                    className="bg-white overflow-y-auto custom-message-list" 
+                    style={{ 
+                      height: 'calc(100% - 70px)',
+                    }}
+                  >
+                    <MessageList />
+                  </div>
 
-            {/* Input */}
-            <div className="border-t bg-white">
-              <MessageInput focus={chatFocused} />
-            </div>
-          </Window>
-          <Thread />
-        </Channel>
-      </Chat>
+                  {/* Input Area */}
+                  <div 
+                    className="border-t border-gray-200 bg-white p-3 rounded-b-lg" 
+                    style={{ height: '70px' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <MessageInput focus={chatFocused} />
+                      </div>
+                    </div>
+                  </div>
+                </Window>
+                <Thread />
+              </Channel>
+            </Chat>
+          </div>
+        </>
+      )}
+
+      {/* Custom Styles */}
+      <style jsx>{`
+        .custom-message-list::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .custom-message-list::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .custom-message-list::-webkit-scrollbar-thumb {
+          background: #CBD5E0;
+          border-radius: 3px;
+        }
+
+        .custom-message-list::-webkit-scrollbar-thumb:hover {
+          background: #A0AEC0;
+        }
+
+        .str-chat {
+          height: 100% !important;
+        }
+
+        .str-chat__container {
+          height: 100% !important;
+        }
+
+        .str-chat__main-panel {
+          height: 100% !important;
+        }
+
+        .str-chat__list {
+          height: 100% !important;
+          overflow-y: auto !important;
+          padding: 16px !important;
+          background: white !important;
+        }
+
+        .str-chat__message-simple {
+          margin-bottom: 12px !important;
+        }
+
+        .str-chat__message-simple-text-inner {
+          background: #F7FAFC !important;
+          border: 1px solid #E2E8F0 !important;
+          border-radius: 12px !important;
+          padding: 10px 14px !important;
+          font-size: 14px !important;
+          color: #2D3748 !important;
+        }
+
+        .str-chat__message-simple--me .str-chat__message-simple-text-inner {
+          background: #667EEA !important;
+          border-color: #667EEA !important;
+          color: white !important;
+        }
+
+        .str-chat__input-flat {
+          background: #F7FAFC !important;
+          border: 1px solid #E2E8F0 !important;
+          border-radius: 20px !important;
+          padding: 8px 16px !important;
+        }
+
+        .str-chat__input-flat:focus-within {
+          border-color: #667EEA !important;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+        }
+
+        .str-chat__textarea textarea {
+          font-size: 14px !important;
+          color: #2D3748 !important;
+          padding: 0 !important;
+        }
+
+        .str-chat__textarea textarea::placeholder {
+          color: #A0AEC0 !important;
+        }
+
+        .str-chat__message-simple-status {
+          display: none !important;
+        }
+
+        .str-chat__send-button {
+          display: none !important;
+        }
+
+        .str-chat__input-flat-emojiselect {
+          display: none !important;
+        }
+
+        .str-chat__input-flat-wrapper {
+          border: none !important;
+          padding: 0 !important;
+        }
+
+        .str-chat__avatar {
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 8px !important;
+        }
+
+        .str-chat__avatar-image {
+          border-radius: 8px !important;
+        }
+
+        .str-chat__message-simple-name {
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #4A5568 !important;
+          margin-bottom: 4px !important;
+        }
+
+        .str-chat__message-simple-timestamp {
+          font-size: 11px !important;
+          color: #A0AEC0 !important;
+        }
+
+        @keyframes slide-down {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
+        }
+
+        .str-chat__date-separator {
+          margin: 16px 0 !important;
+        }
+
+        .str-chat__date-separator-line {
+          background: #E2E8F0 !important;
+        }
+
+        .str-chat__date-separator-date {
+          font-size: 11px !important;
+          color: #718096 !important;
+          background: white !important;
+          padding: 0 8px !important;
+        }
+
+        .str-chat__channel-header {
+          display: none !important;
+        }
+      `}</style>
     </div>
   );
 }
