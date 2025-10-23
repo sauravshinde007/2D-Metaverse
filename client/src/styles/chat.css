@@ -1,0 +1,254 @@
+/* chat.css - Blue Eclipse Theme for StreamChat */
+
+/* 
+Blue Eclipse Color Palette:
+#272757 - Dark purple/blue (main background)
+#8686AC - Light purple/gray (text, secondary elements)
+#505081 - Medium purple (hover states, borders)
+#0F0E47 - Very dark blue (darkest elements, shadows)
+*/
+
+/* Main containers - Blue Eclipse theme */
+.chat-window-discord .str-chat,
+.chat-window-discord .str-chat__channel,
+.chat-window-discord .str-chat__main-panel,
+.chat-window-discord .str-chat__container {
+  background-color: #272757 !important;
+}
+
+/* Message list */
+.chat-window-discord .str-chat__list {
+  background-color: #272757 !important;
+  padding: 16px 0 !important;
+}
+
+/* Individual messages - remove bubble backgrounds */
+.chat-window-discord .str-chat__message-simple {
+  padding: 2px 16px !important;
+  background-color: transparent !important;
+}
+
+.chat-window-discord .str-chat__message-simple:hover {
+  background-color: rgba(80, 80, 129, 0.3) !important;
+}
+
+/* Message text container - CRITICAL FIX */
+.chat-window-discord .str-chat__message-text,
+.chat-window-discord .str-chat__message-text-inner,
+.chat-window-discord .str-chat__message-simple-text,
+.chat-window-discord .str-chat__message-simple-text-inner {
+  background-color: transparent !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: #8686AC !important;
+}
+
+/* Message paragraphs */
+.chat-window-discord .str-chat__message-text p,
+.chat-window-discord .str-chat__message-text-inner p,
+.chat-window-discord .str-chat__message-simple-text p,
+.chat-window-discord .str-chat__message-simple-text-inner p {
+  color: #8686AC !important;
+  margin: 0 !important;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* Remove any bubble styling */
+.chat-window-discord .str-chat__message-bubble {
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Username and timestamp */
+.chat-window-discord .str-chat__message-sender-name {
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+
+.chat-window-discord .str-chat__message-simple-timestamp {
+  color: #8686AC !important;
+  font-size: 12px !important;
+  margin-left: 8px !important;
+  opacity: 0.7 !important;
+}
+
+/* Avatar */
+.chat-window-discord .str-chat__avatar {
+  width: 40px !important;
+  height: 40px !important;
+  margin-right: 16px !important;
+  background-color: transparent !important;
+}
+
+.chat-window-discord .str-chat__avatar-image {
+  border-radius: 50% !important;
+  background-color: transparent !important;
+}
+
+.chat-window-discord .str-chat__avatar-fallback {
+  background: linear-gradient(135deg, #505081 0%, #8686AC 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-radius: 50% !important;
+}
+
+/* Input area - Blue Eclipse theme */
+.chat-window-discord .str-chat__input-flat {
+  background-color: #0F0E47 !important;
+  border: none !important;
+  padding: 16px !important;
+}
+
+.chat-window-discord .str-chat__input-flat-wrapper {
+  background-color: #0F0E47 !important;
+  border: 1px solid #505081 !important;
+  border-radius: 8px !important;
+  margin: 0 16px 16px 16px !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.chat-window-discord .str-chat__input-flat-wrapper:focus-within {
+  border-color: #8686AC !important;
+}
+
+.chat-window-discord .str-chat__textarea,
+.chat-window-discord .str-chat__textarea > div {
+  background-color: #0F0E47 !important;
+}
+
+.chat-window-discord .str-chat__textarea textarea {
+  color: #ffffff !important;
+  background-color: #0F0E47 !important;
+  font-size: 15px !important;
+  padding: 11px 16px !important;
+  min-height: 44px !important;
+}
+
+.chat-window-discord .str-chat__textarea textarea::placeholder {
+  color: #8686AC !important;
+  opacity: 0.6 !important;
+}
+
+/* Emoji picker button styling */
+.chat-window-discord .str-chat__input-flat-emojiselect {
+  display: none !important;
+}
+
+/* Send button */
+.chat-window-discord .str-chat__send-button {
+  display: none !important;
+}
+
+/* Hide channel header if it appears */
+.chat-window-discord .str-chat__channel-header {
+  display: none !important;
+}
+
+/* Hide message status indicators */
+.chat-window-discord .str-chat__message-simple-status {
+  display: none !important;
+}
+
+/* Hide reply counts */
+.chat-window-discord .str-chat__message-replies-count-button {
+  display: none !important;
+}
+
+/* Date separator */
+.chat-window-discord .str-chat__date-separator {
+  color: #8686AC !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.chat-window-discord .str-chat__date-separator-line {
+  background-color: #505081 !important;
+}
+
+/* Loading indicator */
+.chat-window-discord .str-chat__loading-indicator {
+  background-color: #272757 !important;
+  color: #8686AC !important;
+}
+
+/* Scrollbar */
+.chat-window-discord .str-chat__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-window-discord .str-chat__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-window-discord .str-chat__list::-webkit-scrollbar-thumb {
+  background-color: #0F0E47;
+  border-radius: 4px;
+}
+
+.chat-window-discord .str-chat__list::-webkit-scrollbar-thumb:hover {
+  background-color: #505081;
+}
+
+/* Message metadata (username + timestamp row) */
+.chat-window-discord .str-chat__message-metadata {
+  display: flex !important;
+  align-items: baseline !important;
+  margin-bottom: 4px !important;
+}
+
+/* Reactions (if enabled) */
+.chat-window-discord .str-chat__reaction-list {
+  background: transparent !important;
+}
+
+.chat-window-discord .str-chat__message-reactions-list-item {
+  background-color: #505081 !important;
+  border: 1px solid #8686AC !important;
+  color: #ffffff !important;
+}
+
+/* Ensure no backgrounds on any child elements */
+.chat-window-discord .str-chat__message-simple *:not(.str-chat__avatar):not(.str-chat__avatar-fallback) {
+  background-color: transparent !important;
+}
+
+/* But re-apply specific backgrounds where needed */
+.chat-window-discord .str-chat__input-flat-wrapper,
+.chat-window-discord .str-chat__input-flat,
+.chat-window-discord .str-chat__textarea,
+.chat-window-discord .str-chat__textarea > div,
+.chat-window-discord .str-chat__textarea textarea {
+  background-color: #0F0E47 !important;
+}
+
+.chat-window-discord .str-chat__list {
+  background-color: #272757 !important;
+}
+
+.chat-window-discord .str-chat__avatar-fallback {
+  background: linear-gradient(135deg, #505081 0%, #8686AC 100%) !important;
+}
+
+/* Input wrapper background */
+.chat-window-discord .str-chat__input {
+  background-color: #272757 !important;
+}
+
+/* Any emoji icons or attachment buttons */
+.chat-window-discord .str-chat__input-flat-emojiselect button,
+.chat-window-discord .str-chat__fileupload-wrapper button {
+  color: #8686AC !important;
+  background-color: transparent !important;
+  transition: color 0.2s ease !important;
+}
+
+.chat-window-discord .str-chat__input-flat-emojiselect button:hover,
+.chat-window-discord .str-chat__fileupload-wrapper button:hover {
+  color: #ffffff !important;
+}
