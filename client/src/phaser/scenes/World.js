@@ -14,6 +14,10 @@ export default class WorldScene extends Phaser.Scene {
         
         // --- 2. Load the tileset image ---
         this.load.image("room-tiles", "/assets/tilesets/Room_Builder_free_32x32.png");
+        this.load.image("interior-tiles", "/assets/tilesets/Interiors_free_32x32.png");
+        this.load.image("office-tiles", "/assets/tilesets/Modern_Office_Black_Shadow.png");
+        this.load.image("room-floor", "/assets/tilesets/Room_Builder_Floors.png");
+        
         
         // --- 3. Load the player spritesheet ---
         this.load.spritesheet("ash", "/assets/characters/ash.png", {
@@ -29,13 +33,33 @@ export default class WorldScene extends Phaser.Scene {
 
         // --- Link the Tiled tileset name to the Phaser image key ---
         const roomTileset = map.addTilesetImage("Room_Builder_free_32x32", "room-tiles");
+        const interiorTileset = map.addTilesetImage("Interiors_free_32x32", "interior-tiles");
+        const officeTileset = map.addTilesetImage("Modern_Office_Black_Shadow", "office-tiles");
+        const roomfloorTileset = map.addTilesetImage("Room_Builder_Floors", "room-floor");
+
+        const allTimesets = [interiorTileset, roomTileset, officeTileset, roomfloorTileset];
 
         // --- Create Layers ---
-        const groundLayer = map.createLayer("Ground", roomTileset, 0, 0);
-        const wallsLayer = map.createLayer("Wall", roomTileset, 0, 0);
+        const groundLayer = map.createLayer("Ground", allTimesets, 0, 0);
+        const wallsLayer = map.createLayer("Wall", allTimesets, 0, 0);
+        const propsLayer = map.createLayer("Props", allTimesets, 0, 0);
+        const propsLayer1 = map.createLayer("Props1", allTimesets, 0, 0);
+        const propsLayer2 = map.createLayer("Props2", allTimesets, 0, 0);
+
+        // --- ✅ CORRECTION: Set Depth for Correct Rendering Order ---
+        // Objects with a higher depth value are drawn on top.
+        groundLayer.setDepth(0);
+        wallsLayer.setDepth(1);
+        propsLayer.setDepth(2);
+        propsLayer1.setDepth(3);
+        propsLayer2.setDepth(4);
 
         // --- Set Up Collisions ---
         wallsLayer.setCollisionByProperty({ collides: true });
+        propsLayer.setCollisionByProperty({ collides: true });
+        propsLayer1.setCollisionByProperty({ collides: true });
+        propsLayer2.setCollisionByProperty({ collides: true });
+        
 
         // --- World and Camera Bounds ---
         this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -46,15 +70,22 @@ export default class WorldScene extends Phaser.Scene {
         this.createAnimations();
 
         this.player = this.physics.add.sprite(1162, 1199, "ash"); //hard coded spawn for testing
+        
+        // --- ✅ CORRECTION: Set Player Depth ---
+        // Make sure the player is rendered on top of the ground and props layers.
+        this.player.setDepth(5);
 
         // --- Add Colliders ---
         this.physics.add.collider(this.player, wallsLayer);
+        if (propsLayer) {
+            this.physics.add.collider(this.player, propsLayer);
+        }
         this.player.setCollideWorldBounds(true);
         
         this.lastDirection = "down";
         this.currentAnimation = "idle-down";
         this.cameras.main.startFollow(this.player);
-        this.cameras.main.setZoom(1.5);
+        this.cameras.main.setZoom(1);
 
         // --- Input Manager Setup ---
         this.inputManager = new InputManager(this);
@@ -63,10 +94,10 @@ export default class WorldScene extends Phaser.Scene {
         // (Socket.IO listeners)
         this.socket.on("players", (players) => {
              Object.keys(players).forEach((id) => {
-                if (id !== this.socket.id) {
-                    this.addOtherPlayer(id, players[id]);
-                }
-            });
+                 if (id !== this.socket.id) {
+                     this.addOtherPlayer(id, players[id]);
+                 }
+             });
         });
         this.socket.on("playerJoined", ({ id, x, y, anim }) => this.addOtherPlayer(id, { x, y, anim }));
         this.socket.on("playerMoved", ({ id, pos, anim }) => {
@@ -159,6 +190,10 @@ export default class WorldScene extends Phaser.Scene {
         const other = this.physics.add.sprite(data.x, data.y, "ash").setTint(0xff0000);
         other.setImmovable(true);
         other.setCollideWorldBounds(true);
+        
+        // --- ✅ CORRECTION: Set Other Player Depth ---
+        other.setDepth(3); // Same depth as the main player
+
         if (data.anim) other.anims.play(data.anim, true);
         else other.setFrame(18);
         this.players[id] = other;
