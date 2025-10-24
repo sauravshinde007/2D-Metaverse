@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import "./App.css";
+import "./styles/App.css";
 import startGame from "./phaser";
 import HUD from "./components/HUD";
 
@@ -22,9 +22,9 @@ function App() {
       {/* Game fills available space */}
       <div id="game-container" className="game-container" />
 
-     <div className="hud-root">
-        <HUD />
-    </div>
+      <div className="hud-root">
+          <HUD />
+      </div>
     </div>
   );
 }

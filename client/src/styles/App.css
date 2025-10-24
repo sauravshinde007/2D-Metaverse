@@ -1,0 +1,84 @@
+/* App.css - Blue Eclipse Theme */
+
+/* 
+Blue Eclipse Color Palette:
+#272757 - Dark purple/blue (main background)
+#8686AC - Light purple/gray (text, secondary elements)
+#505081 - Medium purple (hover states, borders)
+#0F0E47 - Very dark blue (darkest elements, shadows)
+*/
+
+/* reset */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+.app-root {
+  height: 100vh;
+  display: flex;
+}
+.game-container {
+  position: absolute;
+  inset: 0;
+}
+canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* --- HUD POSITIONING --- */
+.hud-root {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 100;
+}
+
+/* --- CHAT ICON BUTTON - Blue Eclipse Theme --- */
+.chat-icon-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #505081 0%, #8686AC 100%);
+  border: 2px solid #8686AC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 14, 71, 0.6);
+  transition: all 0.2s ease-in-out;
+}
+.chat-icon-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(134, 134, 172, 0.5);
+  background: linear-gradient(135deg, #8686AC 0%, #505081 100%);
+  border-color: #ffffff;
+}
+
+/* --- BLUE ECLIPSE CHAT WINDOW --- */
+.chat-window-discord {
+  width: 360px;
+  height: 540px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 14, 71, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #272757;
+  border: 1px solid #505081;
+}
+
+/* --- BLUE ECLIPSE HEADER --- */
+.discord-header {
+  height: 48px;
+  background-color: #0F0E47;
+  border-bottom: 1px solid #505081;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(15, 14, 71, 0.5);
+}
