@@ -1,19 +1,273 @@
-/* App.css - Blue Eclipse Theme */
+/* client/src/styles/App.css */
+/* ==========================================================================
+   1. GLOBAL STYLES & FONT IMPORTS
+   ========================================================================== */
 
-/* 
-Blue Eclipse Color Palette:
-#272757 - Dark purple/blue (main background)
-#8686AC - Light purple/gray (text, secondary elements)
-#505081 - Medium purple (hover states, borders)
-#0F0E47 - Very dark blue (darkest elements, shadows)
-*/
+/* --- Google Font Import --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
 
-/* reset */
-html, body, #root {
+/* --- CSS Variables for Landing/Auth Theme --- */
+:root {
+  --background-color: #0A0A0A;
+  --text-color: #E0E0E0;
+  --text-secondary-color: #A0A0A0;
+  --border-color: #333333;
+  --accent-gradient: linear-gradient(90deg, #62FFFF, #FF62FF, #FFFF62);
+}
+
+/* --- Global Reset & Body Styles --- */
+html {
+  height: 100%;
+}
+
+body {
   height: 100%;
   margin: 0;
-  overflow: hidden;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
+
+#root {
+  height: 100%;
+}
+
+
+/* ==========================================================================
+   2. LANDING & AUTH PAGE STYLES (Chutes.ai Theme)
+   ========================================================================== */
+
+/* --- Layout Containers --- */
+.landing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  min-height: 100%; 
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; 
+  padding-top: 100px;
+}
+
+.landing-container main {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* --- Navbar --- */
+.navbar {
+  padding: 20px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-weight: 900;
+  font-size: 24px;
+  color: #FFFFFF;
+  text-decoration: none;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* --- Hero Section --- */
+.hero {
+  text-align: center;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero h1 {
+  font-size: 72px;
+  font-weight: 900;
+  margin: 0 auto;
+  max-width: 900px;
+  line-height: 1.1;
+  color: #FFFFFF;
+}
+
+.gradient-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero .subtitle {
+  font-size: 20px;
+  max-width: 600px;
+  margin: 30px auto;
+  color: var(--text-secondary-color);
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* --- Reusable Button Styles --- */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn-primary {
+  background-color: #FFFFFF;
+  color: #0A0A0A;
+}
+
+.btn-primary:hover {
+  background-color: #DDDDDD;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #FFFFFF;
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: #1a1a1a;
+  border-color: #555555;
+}
+
+/* --- Auth Forms --- */
+.auth-form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px;
+  background-color: #111111;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.auth-form h2 {
+  text-align: center;
+  font-size: 32px;
+  margin: 0 0 10px 0;
+  color: #FFFFFF;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-form input {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #62FFFF;
+}
+
+.auth-form .btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 18px;
+}
+
+.auth-form .error-message {
+  color: #FF6B6B;
+  text-align: center;
+  font-size: 14px;
+}
+
+.auth-form .switch-auth {
+  text-align: center;
+  color: var(--text-secondary-color);
+}
+
+.auth-form .switch-auth a {
+  color: #FFFFFF;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-form .switch-auth a:hover {
+  text-decoration: underline;
+}
+
+/* --- Navbar --- */
+.navbar {
+  /* Positioning */
+  position: sticky; /* Sticks to the top on scroll */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000; /* Ensures it stays on top of other content */
+  
+  /* Glassmorphism Effect */
+  background-color: rgba(10, 10, 10, 0.65); /* Dark background with 65% opacity */
+  backdrop-filter: blur(10px); /* This is the magic for the frosted glass effect */
+  -webkit-backdrop-filter: blur(10px); /* For Safari browser support */
+  
+  /* Styling */
+  border-bottom: 1px solid rgba(51, 51, 51, 0.5); /* Semi-transparent border */
+  padding: 16px 0; /* Adjusted vertical padding */
+  transition: background-color 0.3s ease;
+}
+
+.navbar:hover {
+  background-color: rgba(10, 10, 10, 0.8); /* Slightly less transparent on hover */
+}
+
+/* New rule for the inner container we added in the JSX */
+.navbar-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center; /* This vertically aligns the items */
+  justify-content: space-between;
+}
+
+
+/* ==========================================================================
+   3. METAVERSE / IN-GAME UI STYLES (Blue Eclipse Theme)
+   ========================================================================== */
+
+/* --- Game Layout --- */
 .app-root {
   height: 100vh;
   display: flex;
@@ -36,7 +290,7 @@ canvas {
   z-index: 100;
 }
 
-/* --- CHAT ICON BUTTON - Blue Eclipse Theme --- */
+/* --- CHAT ICON BUTTON --- */
 .chat-icon-button {
   width: 56px;
   height: 56px;
@@ -57,7 +311,7 @@ canvas {
   border-color: #ffffff;
 }
 
-/* --- BLUE ECLIPSE CHAT WINDOW --- */
+/* --- CHAT WINDOW --- */
 .chat-window-discord {
   width: 360px;
   height: 540px;
@@ -70,7 +324,7 @@ canvas {
   border: 1px solid #505081;
 }
 
-/* --- BLUE ECLIPSE HEADER --- */
+/* --- CHAT HEADER --- */
 .discord-header {
   height: 48px;
   background-color: #0F0E47;

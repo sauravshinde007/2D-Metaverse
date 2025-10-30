@@ -1,4 +1,3 @@
-// client/src/pages/SignupPage.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -18,7 +17,6 @@ const SignupPage = () => {
       const response = await axios.post(`${serverUrl}/api/auth/signup`, {
         username,
         password,
-        // Role is assigned by default on the server
       });
       const { token, ...userData } = response.data;
       login(userData, token);
@@ -29,10 +27,10 @@ const SignupPage = () => {
   };
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '15%' }}>
-      <h2>Sign Up</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
+    <div className="auth-container">
+      <form onSubmit={handleSubmit} className="auth-form">
+        <h2>Sign Up</h2>
+        <div className="input-group">
           <input
             type="text"
             value={username}
@@ -40,8 +38,6 @@ const SignupPage = () => {
             placeholder="Username"
             required
           />
-        </div>
-        <div>
           <input
             type="password"
             value={password}
@@ -50,12 +46,12 @@ const SignupPage = () => {
             required
           />
         </div>
-        <button type="submit">Sign Up</button>
+        {error && <p className="error-message">{error}</p>}
+        <button type="submit" className="btn btn-primary">Sign Up</button>
+        <p className="switch-auth">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
       </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <p>
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
     </div>
   );
 };

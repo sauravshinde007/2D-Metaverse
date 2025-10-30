@@ -1,16 +1,16 @@
+// client/src/phaser/index.js
 import Phaser from "phaser";
 import WorldScene from "./scenes/World";
-import TestScene from "./scenes/Test";
+// TestScene is not used in this flow, so it can be removed if not needed elsewhere
+// import TestScene from "./scenes/Test";
 
-
-export default function startGame() {
+export default function startGame(username) {
   const container = document.getElementById("game-container");
   if (!container) {
     console.warn("No #game-container found");
     return null;
   }
 
-  // Clear previous Phaser instance if any
   if (window._phaserGame) {
     window._phaserGame.destroy(true);
     window._phaserGame = null;
@@ -33,25 +33,26 @@ export default function startGame() {
         debug: false,
       },
     },
-    scene: [WorldScene],
+    // MODIFICATION: The scene is no longer auto-started here
+    scene: [],
   };
 
   const game = new Phaser.Game(config);
+
+  // MODIFICATION: Manually add the scene and then start it with the username data.
+  // This is the correct way to pass data to a scene on startup.
+  game.scene.add('WorldScene', WorldScene);
+  game.scene.start('WorldScene', { username: username });
 
   // Expose globally for HUD
   window.game = game;
   window._phaserGame = game;
 
-  // Keep canvas in sync with container size
   const handleResize = () => {
     if (container && game && game.scale) {
       const width = container.clientWidth;
       const height = container.clientHeight;
-
-      // Update game dimensions
       game.scale.resize(width, height);
-
-      // Force canvas to match container size
       if (game.canvas) {
         game.canvas.style.width = width + "px";
         game.canvas.style.height = height + "px";
@@ -59,9 +60,7 @@ export default function startGame() {
     }
   };
 
-  // Call it once on mount to sync immediately
   handleResize();
-
   window.addEventListener("resize", handleResize);
 
   game.events.on("destroy", () => {

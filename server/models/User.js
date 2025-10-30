@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
     type: String, 
     enum: ['employee', 'admin', 'hr', 'ceo'], 
     default: 'employee' 
-  }
+  },
+  activeSocketId: { type: String, default: null }
 });
 
 const User = mongoose.model('User', userSchema);

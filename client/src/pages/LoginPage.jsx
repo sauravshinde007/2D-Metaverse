@@ -1,4 +1,3 @@
-// client/src/pages/LoginPage.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -28,10 +27,10 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '15%' }}>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
+    <div className="auth-container">
+      <form onSubmit={handleSubmit} className="auth-form">
+        <h2>Login</h2>
+        <div className="input-group">
           <input
             type="text"
             value={username}
@@ -39,8 +38,6 @@ const LoginPage = () => {
             placeholder="Username"
             required
           />
-        </div>
-        <div>
           <input
             type="password"
             value={password}
@@ -49,12 +46,12 @@ const LoginPage = () => {
             required
           />
         </div>
-        <button type="submit">Log In</button>
+        {error && <p className="error-message">{error}</p>}
+        <button type="submit" className="btn btn-primary">Log In</button>
+        <p className="switch-auth">
+          Don't have an account? <Link to="/signup">Sign Up</Link>
+        </p>
       </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <p>
-        Don't have an account? <Link to="/signup">Sign Up</Link>
-      </p>
     </div>
   );
 };
