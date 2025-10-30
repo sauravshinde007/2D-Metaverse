@@ -1,4 +1,4 @@
-// Phaser/scenes/World.js
+// client/src/phaser/scenes/World.js
 import Phaser from "phaser";
 import { InputManager } from "../input/InputManager";
 import socketService from "../../services/socketService"; // ✅ Import the new service
@@ -13,9 +13,9 @@ export default class WorldScene extends Phaser.Scene {
     this.load.tilemapTiledJSON("office-map", "/assets/map/test.tmj");
 
     // --- 2. Load the tileset image ---
-    this.load.image( "room-tiles", "/assets/tilesets/Room_Builder_free_32x32.png" );
-    this.load.image( "interior-tiles", "/assets/tilesets/Interiors_free_32x32.png" );
-    this.load.image( "office-tiles", "/assets/tilesets/Modern_Office_Black_Shadow.png" );
+    this.load.image("room-tiles", "/assets/tilesets/Room_Builder_free_32x32.png");
+    this.load.image("interior-tiles", "/assets/tilesets/Interiors_free_32x32.png");
+    this.load.image("office-tiles", "/assets/tilesets/Modern_Office_Black_Shadow.png");
     this.load.image("room-floor", "/assets/tilesets/Room_Builder_Floors.png");
 
     // --- 3. Load the player spritesheet ---
@@ -31,12 +31,12 @@ export default class WorldScene extends Phaser.Scene {
     const map = this.make.tilemap({ key: "office-map" });
 
     // --- Link the Tiled tileset name to the Phaser image key ---
-    const roomTileset = map.addTilesetImage( "Room_Builder_free_32x32", "room-tiles" );
-    const interiorTileset = map.addTilesetImage( "Interiors_free_32x32", "interior-tiles" );
-    const officeTileset = map.addTilesetImage( "Modern_Office_Black_Shadow", "office-tiles" );
-    const roomfloorTileset = map.addTilesetImage( "Room_Builder_Floors", "room-floor" );
+    const roomTileset = map.addTilesetImage("Room_Builder_free_32x32", "room-tiles");
+    const interiorTileset = map.addTilesetImage("Interiors_free_32x32", "interior-tiles");
+    const officeTileset = map.addTilesetImage("Modern_Office_Black_Shadow", "office-tiles");
+    const roomfloorTileset = map.addTilesetImage("Room_Builder_Floors", "room-floor");
 
-    const allTimesets = [ interiorTileset, roomTileset, officeTileset, roomfloorTileset, ];
+    const allTimesets = [interiorTileset, roomTileset, officeTileset, roomfloorTileset];
 
     // --- Create Layers ---
     const groundLayer = map.createLayer("Ground", allTimesets, 0, 0);
@@ -79,10 +79,9 @@ export default class WorldScene extends Phaser.Scene {
     this.inputManager = new InputManager(this);
     this.setupInputHandlers();
 
-    // --- ✅ (Socket.IO listeners updated to use the service) ---
+    // --- ✅ Socket.IO Listeners ---
     socketService.onPlayers((players) => {
       Object.keys(players).forEach((id) => {
-        // We get the current client's socket ID directly from the service
         const currentSocketId = socketService.socket?.id;
         if (id !== currentSocketId) {
           this.addOtherPlayer(id, players[id]);
@@ -90,11 +89,19 @@ export default class WorldScene extends Phaser.Scene {
       });
     });
 
-    socketService.onPlayerJoined(({ id, x, y, anim }) => this.addOtherPlayer(id, { x, y, anim }));
+    socketService.onPlayerJoined(({ id, x, y, anim }) =>
+      this.addOtherPlayer(id, { x, y, anim })
+    );
 
     socketService.onPlayerMoved(({ id, pos, anim }) => {
       if (this.players[id]) {
-        this.tweens.add({ targets: this.players[id], x: pos.x, y: pos.y, duration: 120, ease: "Linear", });
+        this.tweens.add({
+          targets: this.players[id],
+          x: pos.x,
+          y: pos.y,
+          duration: 120,
+          ease: "Linear",
+        });
         if (anim && this.players[id].anims) this.players[id].anims.play(anim, true);
       }
     });
@@ -128,14 +135,54 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   createAnimations() {
-    this.anims.create({ key: "idle-right", frames: this.anims.generateFrameNumbers("ash", { start: 0, end: 5 }), repeat: -1, frameRate: 15, });
-    this.anims.create({ key: "idle-up", frames: this.anims.generateFrameNumbers("ash", { start: 6, end: 11 }), repeat: -1, frameRate: 15, });
-    this.anims.create({ key: "idle-left", frames: this.anims.generateFrameNumbers("ash", { start: 12, end: 17 }), repeat: -1, frameRate: 15, });
-    this.anims.create({ key: "idle-down", frames: this.anims.generateFrameNumbers("ash", { start: 18, end: 23 }), repeat: -1, frameRate: 15, });
-    this.anims.create({ key: "walk-right", frames: this.anims.generateFrameNumbers("ash", { start: 24, end: 29 }), frameRate: 10, repeat: -1, });
-    this.anims.create({ key: "walk-up", frames: this.anims.generateFrameNumbers("ash", { start: 30, end: 35 }), frameRate: 10, repeat: -1, });
-    this.anims.create({ key: "walk-left", frames: this.anims.generateFrameNumbers("ash", { start: 36, end: 41 }), frameRate: 10, repeat: -1, });
-    this.anims.create({ key: "walk-down", frames: this.anims.generateFrameNumbers("ash", { start: 42, end: 47 }), frameRate: 15, repeat: -1, });
+    this.anims.create({
+      key: "idle-right",
+      frames: this.anims.generateFrameNumbers("ash", { start: 0, end: 5 }),
+      repeat: -1,
+      frameRate: 15,
+    });
+    this.anims.create({
+      key: "idle-up",
+      frames: this.anims.generateFrameNumbers("ash", { start: 6, end: 11 }),
+      repeat: -1,
+      frameRate: 15,
+    });
+    this.anims.create({
+      key: "idle-left",
+      frames: this.anims.generateFrameNumbers("ash", { start: 12, end: 17 }),
+      repeat: -1,
+      frameRate: 15,
+    });
+    this.anims.create({
+      key: "idle-down",
+      frames: this.anims.generateFrameNumbers("ash", { start: 18, end: 23 }),
+      repeat: -1,
+      frameRate: 15,
+    });
+    this.anims.create({
+      key: "walk-right",
+      frames: this.anims.generateFrameNumbers("ash", { start: 24, end: 29 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "walk-up",
+      frames: this.anims.generateFrameNumbers("ash", { start: 30, end: 35 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "walk-left",
+      frames: this.anims.generateFrameNumbers("ash", { start: 36, end: 41 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "walk-down",
+      frames: this.anims.generateFrameNumbers("ash", { start: 42, end: 47 }),
+      frameRate: 15,
+      repeat: -1,
+    });
   }
 
   setupInputHandlers() {

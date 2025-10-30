@@ -6,6 +6,8 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL;
 let socket = null;
 
 const socketService = {
+  emitter: new EventTarget(),
+
   connect() {
     // Prevent multiple connections
     if (socket && socket.connected) {
@@ -22,6 +24,18 @@ const socketService = {
     socket.on("disconnect", () => {
       console.log("❌ Socket disconnected.");
     });
+  },
+
+  // Add a new emitter for requesting the player list
+  requestPlayers() {
+    if (socket) {
+      socket.emit("getPlayers");
+    }
+  },
+
+  // Expose the socket property for ID checking
+  get socket() {
+    return socket;
   },
 
   disconnect() {

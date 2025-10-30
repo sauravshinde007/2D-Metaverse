@@ -1,32 +1,30 @@
-import { useEffect } from "react";
-import "./styles/App.css";
-import startGame from "./phaser";
-import HUD from "./components/HUD";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+
+//pages
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+
+//game
+import Metaverse from './pages/Metaverse';
 
 function App() {
-  useEffect(() => {
-    if (window._phaserGame) return;
-    const game = startGame();
-    window._phaserGame = game;
+    const { isAuthenticated } = useAuth();
 
-    return () => {
-      if (window._phaserGame) {
-        window._phaserGame.destroy(true);
-        window._phaserGame = null;
-      }
-    };
-  }, []);
-
-  return (
-    <div className="app-root">
-      {/* Game fills available space */}
-      <div id="game-container" className="game-container" />
-
-      <div className="hud-root">
-          <HUD />
-      </div>
-    </div>
-  );
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/metaverse" />} />
+                <Route path="/signup" element={!isAuthenticated ? <SignupPage /> : <Navigate to="/metaverse" />} />
+                <Route 
+                    path="/metaverse" 
+                    element={isAuthenticated ? <Metaverse /> : <Navigate to="/login" />} 
+                />
+            </Routes>
+        </Router>
+    );
 }
 
 export default App;

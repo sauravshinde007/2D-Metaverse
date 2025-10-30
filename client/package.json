@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@stream-io/video-react-sdk": "^1.20.1",
+    "axios": "^1.13.1",
     "phaser": "^3.90.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.5",
     "socket.io-client": "^4.8.1",
     "stream-chat": "^9.18.1",
     "stream-chat-react": "^13.6.0"
