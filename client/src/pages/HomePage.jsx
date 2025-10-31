@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 const HomePage = () => {
@@ -32,7 +31,7 @@ const HomePage = () => {
               <span className="gradient-text">for Work, At Scale.</span>
             </h1>
             <p className="subtitle">
-              The leading open-source, decentralized platform for deploying, scaling, and running your virtual office in production.
+              The leading open-source, decentralized platform for running your virtual office in production.
             </p>
             <div className="hero-buttons">
               <Link to="/signup" className="btn btn-primary">Get Started</Link>

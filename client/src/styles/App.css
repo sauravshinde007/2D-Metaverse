@@ -74,7 +74,7 @@ body {
 }
 
 .logo {
-  font-weight: 900;
+  font-weight: 800;
   font-size: 24px;
   color: #FFFFFF;
   text-decoration: none;
@@ -96,7 +96,7 @@ body {
 
 .hero h1 {
   font-size: 72px;
-  font-weight: 900;
+  font-weight: 700;
   margin: 0 auto;
   max-width: 900px;
   line-height: 1.1;
@@ -253,15 +253,22 @@ body {
 }
 
 /* New rule for the inner container we added in the JSX */
-.navbar-content {
+.navbar .navbar-content {
+  /* Centering the container itself */
   max-width: 1200px;
-  margin: 0 auto;
+  margin-left: auto;
+  margin-right: auto;
+  
+  /* Spacing for content inside */
   padding: 0 24px;
-  display: flex;
-  align-items: center; /* This vertically aligns the items */
-  justify-content: space-between;
-}
+  width: 100%;
+  box-sizing: border-box;
 
+  /* Aligning the items inside (logo left, buttons right) */
+  display: flex;
+  align-items: center;
+  justify-content: space-between; 
+}
 
 /* ==========================================================================
    3. METAVERSE / IN-GAME UI STYLES (Blue Eclipse Theme)
@@ -335,4 +342,39 @@ canvas {
   padding: 0 16px;
   flex-shrink: 0;
   box-shadow: 0 2px 4px rgba(15, 14, 71, 0.5);
+}
+
+/* ADD THIS NEW RULE FOR THE LOGOUT BUTTON */
+.ui-button {
+  /* Positioning */
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 101;
+
+  /* Styling (fits the Blue Eclipse Theme) */
+  padding: 8px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #E0E0E0; /* Light text */
+  background-color: rgba(39, 39, 87, 0.7); /* Semi-transparent dark blue from your theme */
+  border: 1px solid #505081; /* Medium purple border */
+  border-radius: 8px;
+  cursor: pointer;
+  
+  /* Nice glass effect for the in-game UI */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.2s ease-in-out;
+}
+
+
+/* Clear 'danger' indication on hover */
+.ui-button:hover {
+  background-color: rgba(220, 53, 69, 0.9); /* Danger Red */
+  border-color: rgba(255, 100, 100, 0.8);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }

@@ -31,8 +31,8 @@ function Metaverse() {
                     <HUD />
                 </div>
                 <button 
-                    onClick={logout} // This button still works as intended
-                    style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 101 }}
+                    onClick={logout}
+                    className="ui-button"
                 >
                     Logout
                 </button>
