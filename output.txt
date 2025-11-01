@@ -1,6 +1,7 @@
 Folder Structure
 --------------------------------------------------
 2D-Metaverse/
+    output.txt
     README.md
     test.py
     client/
@@ -91,6 +92,21 @@ File Contents
 --------------------------------------------------
 
 
+output.txt
+File type: .txt
+Folder Structure
+--------------------------------------------------
+
+
+File Contents
+--------------------------------------------------
+
+
+--------------------------------------------------
+File End
+--------------------------------------------------
+
+
 README.md
 File type: .md
 # 2D-Metaverse
@@ -103,7 +119,7 @@ File End
 test.py
 File type: .py
 from codebase_to_text import CodebaseToText
-code_to_text = CodebaseToText(input_path="D:/Coding/BE Project/2D-Metaverse", output_path="output.txt", output_type="txt")
+code_to_text = CodebaseToText(input_path="D:/Metaverse/2D-Metaverse", output_path="output.txt", output_type="txt")
 code_to_text.get_file()
 
 --------------------------------------------------
@@ -52203,6 +52219,8 @@ File type: .jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
+import './styles/App.css';
+
 //pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -52238,14 +52256,12 @@ File End
 
 client\src\index.css
 File type: .css
+/* client/src/index.css */
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -52253,60 +52269,9 @@ File type: .css
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-
 
 --------------------------------------------------
 File End
@@ -52342,181 +52307,210 @@ File End
 
 client\src\components\HUD.jsx
 File type: .jsx
+// client/src/components/HUD.jsx
+
 import { useEffect, useState, useRef } from "react";
 import { Chat, Channel, Window, MessageList, MessageInput } from "stream-chat-react";
 import "stream-chat-react/dist/css/v2/index.css";
 import { useChat } from "../context/ChatContext";
 
 export default function HUD() {
-  const { chatClient, channel, isConnecting } = useChat();
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const chatContainerRef = useRef(null);
+    const { chatClient, channel, isConnecting } = useChat();
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const chatContainerRef = useRef(null);
 
-  const [onlineCount, setOnlineCount] = useState(0);
-  const [chatFocused, setChatFocused] = useState(false);
-  const chatFocusedRef = useRef(chatFocused);
-  
-  useEffect(() => { 
-    chatFocusedRef.current = chatFocused; 
-  }, [chatFocused]);
-  
-  // Online count tracking
-  useEffect(() => {
-    if (!channel) return;
-    const updateCount = () => {
-      const members = Object.values(channel.state.members || {});
-      const online = members.filter((m) => m.user?.online);
-      setOnlineCount(online.length);
-    };
-    updateCount();
-    channel.on("presence.diff", updateCount);
-    return () => channel.off("presence.diff", updateCount);
-  }, [channel]);
-  
-  // Chat focus management
-  useEffect(() => {
-    if (!isChatOpen) return;
-
-    const dispatchFocusChange = (isFocused) => {
-      if (chatFocusedRef.current === isFocused) return;
-      setChatFocused(isFocused);
-      window.dispatchEvent(
-        new CustomEvent("chat-focus-change", { detail: { focused: isFocused } })
-      );
-    };
+    const [onlineCount, setOnlineCount] = useState(0);
+    const [chatFocused, setChatFocused] = useState(false);
+    const chatFocusedRef = useRef(chatFocused);
     
-    const handleClickOutside = (event) => {
-      if (chatContainerRef.current && !chatContainerRef.current.contains(event.target)) {
-        if (chatFocusedRef.current) {
-          dispatchFocusChange(false);
-          const chatInput = chatContainerRef.current.querySelector("textarea");
-          if (chatInput) chatInput.blur();
-        }
-      }
-    };
+    useEffect(() => { 
+        chatFocusedRef.current = chatFocused; 
+    }, [chatFocused]);
     
-    const handleInputFocus = (e) => {
-      if (e.target.tagName === 'TEXTAREA') {
-        dispatchFocusChange(true);
-      }
-    };
-    
-    const handleInputBlur = (e) => {
-      if (e.target.tagName === 'TEXTAREA') {
-        setTimeout(() => {
-          const activeElement = document.activeElement;
-          const isInChat = chatContainerRef.current?.contains(activeElement);
-          if (!isInChat || activeElement.tagName !== 'TEXTAREA') {
-            dispatchFocusChange(false);
-          }
-        }, 100);
-      }
-    };
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("focusin", handleInputFocus);
-    document.addEventListener("focusout", handleInputBlur);
-    
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("focusin", handleInputFocus);
-      document.removeEventListener("focusout", handleInputBlur);
-    };
-  }, [isChatOpen]);
-  
-  const toggleChat = (e) => {
-    e.stopPropagation();
-    const willBeOpen = !isChatOpen;
-    setIsChatOpen(willBeOpen);
-    if (!willBeOpen) {
-      setChatFocused(false);
-      window.dispatchEvent(new CustomEvent("chat-focus-change", { detail: { focused: false } }));
-    }
-  };
-
-  if (!isChatOpen) {
-    return (
-      <button className="chat-icon-button" onClick={toggleChat} title="Open Chat">
-        {isConnecting ? (
-          <div className="w-6 h-6 border-2 border-[#8686AC] border-t-transparent rounded-full animate-spin"></div>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-        )}
-      </button>
-    );
-  }
-
-  return (
-    <div ref={chatContainerRef} className="chat-window-discord">
-      {/* Header - Blue Eclipse Theme */}
-      <div style={{
-        height: '48px',
-        backgroundColor: '#0F0E47',
-        borderBottom: '1px solid #505081',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        flexShrink: 0,
-        boxShadow: '0 2px 4px rgba(15, 14, 71, 0.5)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg style={{ width: '20px', height: '20px', color: '#8686AC' }} fill="currentColor" viewBox="0 0 24 24">
-            <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41045 9L8.35045 15H14.3504L15.4104 9H9.41045Z"/>
-          </svg>
-          <h3 style={{ color: '#ffffff', fontSize: '16px', fontWeight: '600', margin: 0 }}>
-            world-chat
-          </h3>
-        </div>
+    // Effect for tracking online presence count
+    useEffect(() => {
+        if (!channel) return;
+        const updateCount = () => {
+            const members = Object.values(channel.state.members || {});
+            const online = members.filter((m) => m.user?.online);
+            setOnlineCount(online.length);
+        };
+        updateCount(); // Initial count
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#8686AC' }} />
-            <span style={{ color: '#8686AC', fontSize: '13px', fontWeight: '500' }}>
-              {onlineCount} online
-            </span>
-          </div>
-          
-          <button
-            onClick={toggleChat}
-            style={{
-              width: '32px', height: '32px', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', background: 'transparent', border: 'none',
-              cursor: 'pointer', color: '#8686AC', borderRadius: '4px', transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#ffffff';
-              e.currentTarget.style.backgroundColor = '#505081';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#8686AC';
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+        channel.on("presence.diff", updateCount);
+        return () => channel.off("presence.diff", updateCount);
+    }, [channel]);
+    
+    // Effect for managing chat focus to avoid interfering with game controls
+    useEffect(() => {
+        if (!isChatOpen) return;
 
-      {/* Chat Body */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {chatClient && channel && (
-          <Chat client={chatClient}>
-            <Channel channel={channel}>
-              <Window>
-                <MessageList />
-                <MessageInput focus={chatFocused} />
-              </Window>
-            </Channel>
-          </Chat>
-        )}
-      </div>
-    </div>
-  );
+        const dispatchFocusChange = (isFocused) => {
+            if (chatFocusedRef.current === isFocused) return;
+            setChatFocused(isFocused);
+            window.dispatchEvent(
+                new CustomEvent("chat-focus-change", { detail: { focused: isFocused } })
+            );
+        };
+        
+        const handleClickOutside = (event) => {
+            if (chatContainerRef.current && !chatContainerRef.current.contains(event.target)) {
+                if (chatFocusedRef.current) {
+                    dispatchFocusChange(false);
+                    const chatInput = chatContainerRef.current.querySelector("textarea");
+                    if (chatInput) chatInput.blur();
+                }
+            }
+        };
+        
+        const handleInputFocus = (e) => {
+            if (e.target.tagName === 'TEXTAREA') {
+                dispatchFocusChange(true);
+            }
+        };
+        
+        const handleInputBlur = (e) => {
+            if (e.target.tagName === 'TEXTAREA') {
+                setTimeout(() => {
+                    const activeElement = document.activeElement;
+                    const isInChat = chatContainerRef.current?.contains(activeElement);
+                    if (!isInChat || activeElement.tagName !== 'TEXTAREA') {
+                        dispatchFocusChange(false);
+                    }
+                }, 100);
+            }
+        };
+        
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("focusin", handleInputFocus);
+        document.addEventListener("focusout", handleInputBlur);
+        
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("focusin", handleInputFocus);
+            document.removeEventListener("focusout", handleInputBlur);
+        };
+    }, [isChatOpen]);
+    
+    const toggleChat = (e) => {
+        e.stopPropagation();
+        const willBeOpen = !isChatOpen;
+        setIsChatOpen(willBeOpen);
+        if (!willBeOpen) {
+            setChatFocused(false);
+            window.dispatchEvent(new CustomEvent("chat-focus-change", { detail: { focused: false } }));
+        }
+    };
+
+    // Helper function to render the correct state of the chat body
+    const renderChatContent = () => {
+        if (isConnecting) {
+            return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#8686AC' }}>
+                    Connecting to chat...
+                </div>
+            );
+        }
+
+        // This is the crucial error handling state
+        if (!chatClient || !channel) {
+            return (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#8686AC' }}>
+                    <p style={{ fontWeight: 'bold', color: 'white' }}>Connection Failed</p>
+                    <p>Could not connect to the chat service. Please try refreshing the page.</p>
+                </div>
+            );
+        }
+
+        // Success state: Render the chat
+        return (
+            <Chat client={chatClient}>
+                <Channel channel={channel}>
+                    <Window>
+                        <MessageList />
+                        <MessageInput focus={chatFocused} />
+                    </Window>
+                </Channel>
+            </Chat>
+        );
+    };
+
+    // Render the collapsed chat icon
+    if (!isChatOpen) {
+        return (
+            <button className="chat-icon-button" onClick={toggleChat} title="Open Chat">
+                {isConnecting ? (
+                    <div className="w-6 h-6 border-2 border-[#8686AC] border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                )}
+            </button>
+        );
+    }
+
+    // Render the expanded chat window
+    return (
+        <div ref={chatContainerRef} className="chat-window-discord">
+            {/* Header */}
+            <div style={{
+                height: '48px',
+                backgroundColor: '#0F0E47',
+                borderBottom: '1px solid #505081',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 16px',
+                flexShrink: 0,
+                boxShadow: '0 2px 4px rgba(15, 14, 71, 0.5)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg style={{ width: '20px', height: '20px', color: '#8686AC' }} fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41045 9L8.35045 15H14.3504L15.4104 9H9.41045Z" />
+                    </svg>
+                    <h3 style={{ color: '#ffffff', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                        world-chat
+                    </h3>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#8686AC' }} />
+                        <span style={{ color: '#8686AC', fontSize: '13px', fontWeight: '500' }}>
+                            {onlineCount} online
+                        </span>
+                    </div>
+                    
+                    <button
+                        onClick={toggleChat}
+                        style={{
+                            width: '32px', height: '32px', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', background: 'transparent', border: 'none',
+                            cursor: 'pointer', color: '#8686AC', borderRadius: '4px', transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.backgroundColor = '#505081';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#8686AC';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            {/* Chat Body */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {renderChatContent()}
+            </div>
+        </div>
+    );
 }
 
 --------------------------------------------------
@@ -52527,7 +52521,9 @@ File End
 client\src\context\AuthContext.jsx
 File type: .jsx
 // client/src/context/AuthContext.jsx
+
 import React, { createContext, useState, useCallback, useContext, useEffect } from 'react';
+import socketService from '../services/socketService'; // ✅ Import the socket service
 
 export const AuthContext = createContext();
 
@@ -52543,22 +52539,53 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const logout = useCallback(() => {
+        // This is now the ONLY place where local storage is cleared.
         setToken(null);
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        // This will trigger a re-render in App.jsx and redirect to /login
+
+        // Disconnect the socket as the final step of logging out.
+        socketService.disconnect();
     }, []);
 
-    // Effect to check local storage on initial load
     useEffect(() => {
         const storedToken = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
         if (storedToken && storedUser) {
             login(JSON.parse(storedUser), storedToken);
         }
-    }, [login]);
 
+        // ✅ ADDED: Set up a listener for the server-forced disconnect event.
+        // This will now handle the logic for being logged out by another session.
+        const handleForceDisconnect = (message) => {
+            alert(message || 'Session terminated due to a new login from another device.');
+            // We call the main logout function, which is the single source of truth for cleaning up.
+            logout();
+        };
+
+        // We can't listen until the socket is connected. A simple delay or a more
+        // complex event system could work. Let's assume the socket in World.js
+        // connects quickly. We listen on the socket instance itself.
+        // This check ensures we don't try to add a listener to a null object.
+        if (socketService.socket) {
+            socketService.socket.on('forceDisconnect', handleForceDisconnect);
+        } else {
+            // If the socket isn't ready yet, wait a moment. This handles timing.
+            setTimeout(() => {
+                if (socketService.socket) {
+                    socketService.socket.on('forceDisconnect', handleForceDisconnect);
+                }
+            }, 1000); // Wait 1 second for the socket in Phaser to connect.
+        }
+
+        // Cleanup the listener when the provider unmounts
+        return () => {
+            if (socketService.socket) {
+                socketService.socket.off('forceDisconnect', handleForceDisconnect);
+            }
+        };
+    }, [login, logout]);
 
     return (
         <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated: !!token }}>
@@ -52579,7 +52606,7 @@ File type: .jsx
 // client/src/context/ChatContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import { StreamChat } from 'stream-chat';
-import { useAuth } from './AuthContext'; // Import useAuth
+import { useAuth } from './AuthContext';
 
 const apiKey = import.meta.env.VITE_STREAM_API_KEY;
 const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
@@ -52590,44 +52617,76 @@ export const ChatProvider = ({ children }) => {
     const [chatClient, setChatClient] = useState(null);
     const [channel, setChannel] = useState(null);
     const [isConnecting, setIsConnecting] = useState(true);
-    const { user, token } = useAuth(); // Get authenticated user and JWT
+    const { user, token } = useAuth();
 
     useEffect(() => {
-        if (!user || !token) return;
-
-        const client = StreamChat.getInstance(apiKey);
+        // This is the main connection and cleanup logic
+        let client;
+        let didAbort = false;
 
         const initChat = async () => {
+            if (!user || !token) {
+                setIsConnecting(false);
+                return; // Not ready to connect
+            }
+
+            setIsConnecting(true);
+            client = StreamChat.getInstance(apiKey);
+
             try {
-                if (client.userID !== user.username) {
-                    if (client.userID) {
-                        await client.disconnectUser();
-                    }
-                    const res = await fetch(`${serverUrl}/api/stream/get-token`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    const data = await res.json();
-                    await client.connectUser(
-                        { id: user.username, name: user.username, role: user.role },
-                        data.token
-                    );
+                // Fetch the user token from your backend
+                const response = await fetch(`${serverUrl}/api/stream/get-token`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (didAbort) return;
+
+                if (!response.ok) {
+                    throw new Error(`Failed to get Stream token: ${response.statusText}`);
                 }
+
+                const data = await response.json();
+
+                // Connect the user to Stream
+                await client.connectUser(
+                    { id: user.username, name: user.username, role: user.role },
+                    data.token
+                );
                 
+                if (didAbort) return;
+
+                // Get and watch the main channel
                 const mainChannel = client.channel("messaging", "metaverse-room", { name: "Metaverse Lobby" });
-                await mainChannel.watch({ presence: true });
-                
+                await mainChannel.watch();
+
                 setChatClient(client);
                 setChannel(mainChannel);
+
             } catch (error) {
                 console.error("Failed to initialize chat:", error);
+                // On error, ensure we clear the state
+                setChatClient(null);
+                setChannel(null);
             } finally {
-                setIsConnecting(false);
+                if (!didAbort) {
+                    setIsConnecting(false);
+                }
             }
         };
 
         initChat();
-        
-    }, [user, token]);
+
+        // Cleanup function
+        return () => {
+            didAbort = true;
+            if (client) {
+                client.disconnectUser();
+            }
+            setChatClient(null);
+            setChannel(null);
+            setIsConnecting(true);
+        };
+    }, [user, token]); // Rerun this entire effect if the user or token changes
 
     return (
         <ChatContext.Provider value={{ chatClient, channel, isConnecting }}>
@@ -52645,24 +52704,49 @@ File End
 
 client\src\pages\HomePage.jsx
 File type: .jsx
-// client/src/pages/HomePage.jsx
-import React from 'react';
 import { Link } from 'react-router-dom';
 
 const HomePage = () => {
   return (
-    <div style={{ textAlign: 'center', marginTop: '20%' }}>
-      <h1>Welcome to the 2D Metaverse</h1>
-      <p>Please log in or sign up to continue.</p>
-      <div>
-        <Link to="/login" style={{ marginRight: '1rem' }}>
-          <button>Login</button>
-        </Link>
-        <Link to="/signup">
-          <button>Sign Up</button>
-        </Link>
+    // Use a React Fragment <> to return multiple elements
+    <>
+      <header className="navbar">
+        {/* This new inner div will center the content */}
+        <div className="navbar-content">
+          <a href="/" className="logo">
+            Metaverse
+          </a>
+          <div className="nav-buttons">
+            <Link to="/login" className="btn btn-secondary">
+              Login
+            </Link>
+            <Link to="/signup" className="btn btn-primary">
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* The landing-container now only wraps the main content */}
+      <div className="landing-container">
+        <main>
+          <section className="hero">
+            <h1>
+              Your Office Metaverse
+              <br />
+              <span className="gradient-text">for Work, At Scale.</span>
+            </h1>
+            <p className="subtitle">
+              The leading open-source, decentralized platform for running your virtual office in production.
+            </p>
+            <div className="hero-buttons">
+              <Link to="/signup" className="btn btn-primary">Get Started</Link>
+              <Link to="/login" className="btn btn-secondary">Login to Your Office</Link>
+            </div>
+          </section>
+        </main>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -52675,7 +52759,6 @@ File End
 
 client\src\pages\LoginPage.jsx
 File type: .jsx
-// client/src/pages/LoginPage.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -52705,10 +52788,10 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '15%' }}>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
+    <div className="auth-container">
+      <form onSubmit={handleSubmit} className="auth-form">
+        <h2>Login</h2>
+        <div className="input-group">
           <input
             type="text"
             value={username}
@@ -52716,8 +52799,6 @@ const LoginPage = () => {
             placeholder="Username"
             required
           />
-        </div>
-        <div>
           <input
             type="password"
             value={password}
@@ -52726,12 +52807,12 @@ const LoginPage = () => {
             required
           />
         </div>
-        <button type="submit">Log In</button>
+        {error && <p className="error-message">{error}</p>}
+        <button type="submit" className="btn btn-primary">Log In</button>
+        <p className="switch-auth">
+          Don't have an account? <Link to="/signup">Sign Up</Link>
+        </p>
       </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <p>
-        Don't have an account? <Link to="/signup">Sign Up</Link>
-      </p>
     </div>
   );
 };
@@ -52746,6 +52827,7 @@ File End
 client\src\pages\Metaverse.jsx
 File type: .jsx
 // client/src/pages/Metaverse.jsx
+
 import { useEffect } from "react";
 import "../styles/App.css";
 import startGame from "../phaser";
@@ -52754,45 +52836,37 @@ import { ChatProvider } from "../context/ChatContext";
 import { useAuth } from "../context/AuthContext";
 
 function Metaverse() {
-  const { logout } = useAuth();
+    const { logout, user } = useAuth(); // We still need logout for the button
 
-  useEffect(() => {
-    const game = startGame();
-    
-    // Define a handler for the custom event
-    const handleLogoutRequest = () => {
-        logout();
-    };
+    useEffect(() => {
+        if (user && user.username) {
+            const game = startGame(user.username);
 
-    // Listen for the custom event from Phaser
-    window.addEventListener('request-logout', handleLogoutRequest);
-    
-    return () => {
-      // Cleanup when the component unmounts
-      if (window._phaserGame) {
-        window._phaserGame.destroy(true);
-        window._phaserGame = null;
-      }
-      window.removeEventListener('request-logout', handleLogoutRequest);
-    };
-  }, [logout]);
+            return () => {
+                if (window._phaserGame) {
+                    window._phaserGame.destroy(true);
+                    window._phaserGame = null;
+                }
+            };
+        }
+    }, [user]);
 
-  return (
-    <ChatProvider>
-        <div className="app-root">
-            <div id="game-container" className="game-container" />
-            <div className="hud-root">
-                <HUD />
+    return (
+        <ChatProvider>
+            <div className="app-root">
+                <div id="game-container" className="game-container" />
+                <div className="hud-root">
+                    <HUD />
+                </div>
+                <button 
+                    onClick={logout}
+                    className="ui-button"
+                >
+                    Logout
+                </button>
             </div>
-            <button 
-                onClick={logout} 
-                style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 101 }}
-            >
-                Logout
-            </button>
-        </div>
-    </ChatProvider>
-  );
+        </ChatProvider>
+    );
 }
 
 export default Metaverse;
@@ -52804,7 +52878,6 @@ File End
 
 client\src\pages\SignupPage.jsx
 File type: .jsx
-// client/src/pages/SignupPage.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -52824,7 +52897,6 @@ const SignupPage = () => {
       const response = await axios.post(`${serverUrl}/api/auth/signup`, {
         username,
         password,
-        // Role is assigned by default on the server
       });
       const { token, ...userData } = response.data;
       login(userData, token);
@@ -52835,10 +52907,10 @@ const SignupPage = () => {
   };
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '15%' }}>
-      <h2>Sign Up</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
+    <div className="auth-container">
+      <form onSubmit={handleSubmit} className="auth-form">
+        <h2>Sign Up</h2>
+        <div className="input-group">
           <input
             type="text"
             value={username}
@@ -52846,8 +52918,6 @@ const SignupPage = () => {
             placeholder="Username"
             required
           />
-        </div>
-        <div>
           <input
             type="password"
             value={password}
@@ -52856,12 +52926,12 @@ const SignupPage = () => {
             required
           />
         </div>
-        <button type="submit">Sign Up</button>
+        {error && <p className="error-message">{error}</p>}
+        <button type="submit" className="btn btn-primary">Sign Up</button>
+        <p className="switch-auth">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
       </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <p>
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
     </div>
   );
 };
@@ -52875,19 +52945,19 @@ File End
 
 client\src\phaser\index.js
 File type: .js
+// client/src/phaser/index.js
 import Phaser from "phaser";
 import WorldScene from "./scenes/World";
-import TestScene from "./scenes/Test";
+// TestScene is not used in this flow, so it can be removed if not needed elsewhere
+// import TestScene from "./scenes/Test";
 
-
-export default function startGame() {
+export default function startGame(username) {
   const container = document.getElementById("game-container");
   if (!container) {
     console.warn("No #game-container found");
     return null;
   }
 
-  // Clear previous Phaser instance if any
   if (window._phaserGame) {
     window._phaserGame.destroy(true);
     window._phaserGame = null;
@@ -52910,25 +52980,26 @@ export default function startGame() {
         debug: false,
       },
     },
-    scene: [WorldScene],
+    // MODIFICATION: The scene is no longer auto-started here
+    scene: [],
   };
 
   const game = new Phaser.Game(config);
+
+  // MODIFICATION: Manually add the scene and then start it with the username data.
+  // This is the correct way to pass data to a scene on startup.
+  game.scene.add('WorldScene', WorldScene);
+  game.scene.start('WorldScene', { username: username });
 
   // Expose globally for HUD
   window.game = game;
   window._phaserGame = game;
 
-  // Keep canvas in sync with container size
   const handleResize = () => {
     if (container && game && game.scale) {
       const width = container.clientWidth;
       const height = container.clientHeight;
-
-      // Update game dimensions
       game.scale.resize(width, height);
-
-      // Force canvas to match container size
       if (game.canvas) {
         game.canvas.style.width = width + "px";
         game.canvas.style.height = height + "px";
@@ -52936,9 +53007,7 @@ export default function startGame() {
     }
   };
 
-  // Call it once on mount to sync immediately
   handleResize();
-
   window.addEventListener("resize", handleResize);
 
   game.events.on("destroy", () => {
@@ -52948,7 +53017,6 @@ export default function startGame() {
 
   return game;
 }
-
 
 --------------------------------------------------
 File End
@@ -53217,24 +53285,23 @@ File type: .js
 // client/src/phaser/scenes/World.js
 import Phaser from "phaser";
 import { InputManager } from "../input/InputManager";
-import socketService from "../../services/socketService"; // ✅ Import the new service
+import socketService from "../../services/socketService";
 
 export default class WorldScene extends Phaser.Scene {
   constructor() {
     super("WorldScene");
   }
 
-  preload() {
-    // --- 1. Load the Tiled map data ---
-    this.load.tilemapTiledJSON("office-map", "/assets/map/test.tmj");
+  init(data) {
+    this.username = data.username;
+  }
 
-    // --- 2. Load the tileset image ---
+  preload() {
+    this.load.tilemapTiledJSON("office-map", "/assets/map/test.tmj");
     this.load.image("room-tiles", "/assets/tilesets/Room_Builder_free_32x32.png");
     this.load.image("interior-tiles", "/assets/tilesets/Interiors_free_32x32.png");
     this.load.image("office-tiles", "/assets/tilesets/Modern_Office_Black_Shadow.png");
     this.load.image("room-floor", "/assets/tilesets/Room_Builder_Floors.png");
-
-    // --- 3. Load the player spritesheet ---
     this.load.spritesheet("ash", "/assets/characters/ash.png", {
       frameWidth: 32,
       frameHeight: 48,
@@ -53242,47 +53309,47 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   create() {
-    socketService.connect(); // ✅ Connect using the service
+    socketService.connect();
+    socketService.socket.emit("joinGame", this.username);
 
     const map = this.make.tilemap({ key: "office-map" });
 
-    // --- Link the Tiled tileset name to the Phaser image key ---
+    //Tilsets
     const roomTileset = map.addTilesetImage("Room_Builder_free_32x32", "room-tiles");
     const interiorTileset = map.addTilesetImage("Interiors_free_32x32", "interior-tiles");
     const officeTileset = map.addTilesetImage("Modern_Office_Black_Shadow", "office-tiles");
     const roomfloorTileset = map.addTilesetImage("Room_Builder_Floors", "room-floor");
-
     const allTimesets = [interiorTileset, roomTileset, officeTileset, roomfloorTileset];
 
-    // --- Create Layers ---
+    //Layers
     const groundLayer = map.createLayer("Ground", allTimesets, 0, 0);
     const wallsLayer = map.createLayer("Wall", allTimesets, 0, 0);
     const propsLayer = map.createLayer("Props", allTimesets, 0, 0);
     const propsLayer1 = map.createLayer("Props1", allTimesets, 0, 0);
     const propsLayer2 = map.createLayer("Props2", allTimesets, 0, 0);
 
-    // --- Set Depth for Correct Rendering Order ---
-    groundLayer.setDepth(0);
-    wallsLayer.setDepth(1);
-    propsLayer.setDepth(2);
-    propsLayer1.setDepth(3);
+    //Setup layers
+    groundLayer.setDepth(0); 
+    wallsLayer.setDepth(1); 
+    propsLayer.setDepth(2); 
+    propsLayer1.setDepth(3); 
     propsLayer2.setDepth(4);
 
-    // --- Set Up Collisions ---
-    wallsLayer.setCollisionByProperty({ collides: true });
+    wallsLayer.setCollisionByProperty({ collides: true }); 
     propsLayer.setCollisionByProperty({ collides: true });
-    propsLayer1.setCollisionByProperty({ collides: true });
+    propsLayer1.setCollisionByProperty({ collides: true }); 
     propsLayer2.setCollisionByProperty({ collides: true });
 
-    // --- World and Camera Bounds ---
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-
-    // --- Player Setup ---
     this.players = {};
     this.createAnimations();
     this.player = this.physics.add.sprite(1162, 1199, "ash");
+    this.playerUsernameText = this.add.text(this.player.x, this.player.y - 30, this.username, {
+        fontSize: '14px', fill: '#90EE90', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
     this.player.setDepth(5);
+    this.playerUsernameText.setDepth(6);
     this.physics.add.collider(this.player, wallsLayer);
     this.physics.add.collider(this.player, propsLayer);
     this.player.setCollideWorldBounds(true);
@@ -53290,115 +53357,46 @@ export default class WorldScene extends Phaser.Scene {
     this.currentAnimation = "idle-down";
     this.cameras.main.startFollow(this.player);
     this.cameras.main.setZoom(1);
-
-    // --- Input Manager Setup ---
     this.inputManager = new InputManager(this);
     this.setupInputHandlers();
-
-    // --- ✅ Socket.IO Listeners ---
     socketService.onPlayers((players) => {
       Object.keys(players).forEach((id) => {
         const currentSocketId = socketService.socket?.id;
-        if (id !== currentSocketId) {
-          this.addOtherPlayer(id, players[id]);
-        }
+        if (id !== currentSocketId) { this.addOtherPlayer(id, players[id]); }
       });
     });
-
-    socketService.onPlayerJoined(({ id, x, y, anim }) =>
-      this.addOtherPlayer(id, { x, y, anim })
-    );
-
+    socketService.onPlayerJoined((playerData) => this.addOtherPlayer(playerData.id, playerData));
     socketService.onPlayerMoved(({ id, pos, anim }) => {
-      if (this.players[id]) {
-        this.tweens.add({
-          targets: this.players[id],
-          x: pos.x,
-          y: pos.y,
-          duration: 120,
-          ease: "Linear",
-        });
-        if (anim && this.players[id].anims) this.players[id].anims.play(anim, true);
+      const playerContainer = this.players[id];
+      if (playerContainer) {
+        this.tweens.add({ targets: playerContainer, x: pos.x, y: pos.y, duration: 120, ease: "Linear" });
+        const playerSprite = playerContainer.getAt(0);
+        if (anim && playerSprite.anims) playerSprite.anims.play(anim, true);
       }
     });
-
     socketService.onPlayerLeft((id) => {
-      if (this.players[id]) {
-        this.players[id].destroy();
-        delete this.players[id];
-      }
+      if (this.players[id]) { this.players[id].destroy(); delete this.players[id]; }
     });
-
     this.movement = { up: false, down: false, left: false, right: false };
-
-    // Network Optimization
     this.lastSentState = { x: 0, y: 0, anim: "" };
     this.positionUpdateInterval = setInterval(() => {
-      const currentState = {
-        x: Math.round(this.player.x),
-        y: Math.round(this.player.y),
-        anim: this.currentAnimation,
-      };
-      if (
-        currentState.x !== this.lastSentState.x ||
-        currentState.y !== this.lastSentState.y ||
-        currentState.anim !== this.lastSentState.anim
-      ) {
-        socketService.emitMove(currentState); // ✅ Use service to emit
+      const currentState = { x: Math.round(this.player.x), y: Math.round(this.player.y), anim: this.currentAnimation };
+      if (currentState.x !== this.lastSentState.x || currentState.y !== this.lastSentState.y || currentState.anim !== this.lastSentState.anim) {
+        socketService.emitMove(currentState);
         this.lastSentState = currentState;
       }
     }, 100);
   }
 
   createAnimations() {
-    this.anims.create({
-      key: "idle-right",
-      frames: this.anims.generateFrameNumbers("ash", { start: 0, end: 5 }),
-      repeat: -1,
-      frameRate: 15,
-    });
-    this.anims.create({
-      key: "idle-up",
-      frames: this.anims.generateFrameNumbers("ash", { start: 6, end: 11 }),
-      repeat: -1,
-      frameRate: 15,
-    });
-    this.anims.create({
-      key: "idle-left",
-      frames: this.anims.generateFrameNumbers("ash", { start: 12, end: 17 }),
-      repeat: -1,
-      frameRate: 15,
-    });
-    this.anims.create({
-      key: "idle-down",
-      frames: this.anims.generateFrameNumbers("ash", { start: 18, end: 23 }),
-      repeat: -1,
-      frameRate: 15,
-    });
-    this.anims.create({
-      key: "walk-right",
-      frames: this.anims.generateFrameNumbers("ash", { start: 24, end: 29 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "walk-up",
-      frames: this.anims.generateFrameNumbers("ash", { start: 30, end: 35 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "walk-left",
-      frames: this.anims.generateFrameNumbers("ash", { start: 36, end: 41 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "walk-down",
-      frames: this.anims.generateFrameNumbers("ash", { start: 42, end: 47 }),
-      frameRate: 15,
-      repeat: -1,
-    });
+    this.anims.create({ key: "idle-right", frames: this.anims.generateFrameNumbers("ash", { start: 0, end: 5 }), repeat: -1, frameRate: 15 });
+    this.anims.create({ key: "idle-up", frames: this.anims.generateFrameNumbers("ash", { start: 6, end: 11 }), repeat: -1, frameRate: 15 });
+    this.anims.create({ key: "idle-left", frames: this.anims.generateFrameNumbers("ash", { start: 12, end: 17 }), repeat: -1, frameRate: 15 });
+    this.anims.create({ key: "idle-down", frames: this.anims.generateFrameNumbers("ash", { start: 18, end: 23 }), repeat: -1, frameRate: 15 });
+    this.anims.create({ key: "walk-right", frames: this.anims.generateFrameNumbers("ash", { start: 24, end: 29 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: "walk-up", frames: this.anims.generateFrameNumbers("ash", { start: 30, end: 35 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: "walk-left", frames: this.anims.generateFrameNumbers("ash", { start: 36, end: 41 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: "walk-down", frames: this.anims.generateFrameNumbers("ash", { start: 42, end: 47 }), frameRate: 15, repeat: -1 });
   }
 
   setupInputHandlers() {
@@ -53425,27 +53423,25 @@ export default class WorldScene extends Phaser.Scene {
     }
   }
 
-  handleInteraction() {
-    console.log("Player interaction");
-  }
+  handleInteraction() { console.log("Player interaction"); }
 
   addOtherPlayer(id, data) {
-    const other = this.physics.add
-      .sprite(data.x, data.y, "ash")
-      .setTint(0xff0000);
-    other.setImmovable(true);
-    other.setCollideWorldBounds(true);
-    other.setDepth(3); // Same depth as the main player
-    if (data.anim) other.anims.play(data.anim, true);
-    else other.setFrame(18);
-    this.players[id] = other;
+    const otherPlayerSprite = this.add.sprite(0, 0, "ash");
+    const usernameText = this.add.text(0, -30, data.username, {
+      fontSize: '14px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    const playerContainer = this.add.container(data.x, data.y, [otherPlayerSprite, usernameText]);
+    playerContainer.setDepth(5);
+    if (data.anim) otherPlayerSprite.anims.play(data.anim, true);
+    else otherPlayerSprite.setFrame(18);
+    this.players[id] = playerContainer;
   }
 
   update() {
     if (!this.player || !this.player.body) return;
-
+    this.playerUsernameText.setPosition(this.player.x, this.player.y - 30);
     if (this.inputManager.chatFocused) {
-      this.player.body.setVelocity(0); // Stop player movement
+      this.player.body.setVelocity(0);
       this.movement = { up: false, down: false, left: false, right: false };
       const idleAnim = `idle-${this.lastDirection}`;
       if (this.currentAnimation !== idleAnim) {
@@ -53454,49 +53450,25 @@ export default class WorldScene extends Phaser.Scene {
       }
       return;
     }
-
-    const speed = 200;
-    this.player.body.setVelocity(0);
-
-    let dx = 0;
-    let dy = 0;
-    if (this.movement.left) dx = -1;
-    else if (this.movement.right) dx = 1;
-    if (this.movement.up) dy = -1;
-    else if (this.movement.down) dy = 1;
-
-    this.player.body.setVelocityX(dx * speed);
-    this.player.body.setVelocityY(dy * speed);
+    const speed = 200; this.player.body.setVelocity(0); let dx = 0, dy = 0;
+    if (this.movement.left) dx = -1; else if (this.movement.right) dx = 1;
+    if (this.movement.up) dy = -1; else if (this.movement.down) dy = 1;
+    this.player.body.setVelocityX(dx * speed); this.player.body.setVelocityY(dy * speed);
     this.player.body.velocity.normalize().scale(speed);
-
-    if (this.player.body.velocity.x < 0) {
-      this.currentAnimation = "walk-left";
-      this.lastDirection = "left";
-    } else if (this.player.body.velocity.x > 0) {
-      this.currentAnimation = "walk-right";
-      this.lastDirection = "right";
-    } else if (this.player.body.velocity.y < 0) {
-      this.currentAnimation = "walk-up";
-      this.lastDirection = "up";
-    } else if (this.player.body.velocity.y > 0) {
-      this.currentAnimation = "walk-down";
-      this.lastDirection = "down";
-    } else {
-      this.currentAnimation = `idle-${this.lastDirection}`;
-    }
+    if (this.player.body.velocity.x < 0) { this.currentAnimation = "walk-left"; this.lastDirection = "left"; }
+    else if (this.player.body.velocity.x > 0) { this.currentAnimation = "walk-right"; this.lastDirection = "right"; }
+    else if (this.player.body.velocity.y < 0) { this.currentAnimation = "walk-up"; this.lastDirection = "up"; }
+    else if (this.player.body.velocity.y > 0) { this.currentAnimation = "walk-down"; this.lastDirection = "down"; }
+    else { this.currentAnimation = `idle-${this.lastDirection}`; }
     this.player.anims.play(this.currentAnimation, true);
   }
 
   shutdown() {
     if (this.positionUpdateInterval) clearInterval(this.positionUpdateInterval);
     if (this.inputManager) this.inputManager.destroy();
-
-    // ✅ Disconnect and clean up listeners via the service
     socketService.removeAllListeners();
-    socketService.disconnect();
   }
 }
-
 
 --------------------------------------------------
 File End
@@ -53513,34 +53485,24 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL;
 let socket = null;
 
 const socketService = {
-  emitter: new EventTarget(),
-
   connect() {
-    // Prevent multiple connections
     if (socket && socket.connected) {
       return;
     }
-
     console.log("🔌 Connecting to socket server...");
     socket = io(SOCKET_URL);
-
-    socket.on("connect", () => {
-      console.log("✅ Socket connected with ID:", socket.id);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("❌ Socket disconnected.");
-    });
+    socket.on("connect", () => console.log("✅ Socket connected with ID:", socket.id));
+    socket.on("disconnect", () => console.log("❌ Socket disconnected."));
   },
 
-  // Add a new emitter for requesting the player list
-  requestPlayers() {
+  // ✅ ADDED: A generic method to listen to any socket event.
+  // This is crucial for allowing AuthContext to listen for 'forceDisconnect'.
+  on(eventName, callback) {
     if (socket) {
-      socket.emit("getPlayers");
+      socket.on(eventName, callback);
     }
   },
 
-  // Expose the socket property for ID checking
   get socket() {
     return socket;
   },
@@ -53552,14 +53514,12 @@ const socketService = {
     }
   },
 
-  // --- Emitters (Sending data to server) ---
   emitMove(positionData) {
     if (socket) {
       socket.emit("move", positionData);
     }
   },
 
-  // --- Listeners (Receiving data from server) ---
   onPlayers(callback) {
     if (socket) {
       socket.on("players", callback);
@@ -53584,7 +53544,6 @@ const socketService = {
     }
   },
   
-  // Method to remove all listeners, useful for cleanup
   removeAllListeners() {
       if (socket) {
           socket.removeAllListeners();
@@ -53601,22 +53560,283 @@ File End
 
 client\src\styles\App.css
 File type: .css
-/* App.css - Blue Eclipse Theme */
+/* client/src/styles/App.css */
+/* ==========================================================================
+   1. GLOBAL STYLES & FONT IMPORTS
+   ========================================================================== */
 
-/* 
-Blue Eclipse Color Palette:
-#272757 - Dark purple/blue (main background)
-#8686AC - Light purple/gray (text, secondary elements)
-#505081 - Medium purple (hover states, borders)
-#0F0E47 - Very dark blue (darkest elements, shadows)
-*/
+/* --- Google Font Import --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
 
-/* reset */
-html, body, #root {
+/* --- CSS Variables for Landing/Auth Theme --- */
+:root {
+  --background-color: #0A0A0A;
+  --text-color: #E0E0E0;
+  --text-secondary-color: #A0A0A0;
+  --border-color: #333333;
+  --accent-gradient: linear-gradient(90deg, #62FFFF, #FF62FF, #FFFF62);
+}
+
+/* --- Global Reset & Body Styles --- */
+html {
+  height: 100%;
+}
+
+body {
   height: 100%;
   margin: 0;
-  overflow: hidden;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
+
+#root {
+  height: 100%;
+}
+
+
+/* ==========================================================================
+   2. LANDING & AUTH PAGE STYLES (Chutes.ai Theme)
+   ========================================================================== */
+
+/* --- Layout Containers --- */
+.landing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  min-height: 100%; 
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; 
+  padding-top: 100px;
+}
+
+.landing-container main {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* --- Navbar --- */
+.navbar {
+  padding: 20px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 24px;
+  color: #FFFFFF;
+  text-decoration: none;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* --- Hero Section --- */
+.hero {
+  text-align: center;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero h1 {
+  font-size: 72px;
+  font-weight: 700;
+  margin: 0 auto;
+  max-width: 900px;
+  line-height: 1.1;
+  color: #FFFFFF;
+}
+
+.gradient-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero .subtitle {
+  font-size: 20px;
+  max-width: 600px;
+  margin: 30px auto;
+  color: var(--text-secondary-color);
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+/* --- Reusable Button Styles --- */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.btn-primary {
+  background-color: #FFFFFF;
+  color: #0A0A0A;
+}
+
+.btn-primary:hover {
+  background-color: #DDDDDD;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #FFFFFF;
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: #1a1a1a;
+  border-color: #555555;
+}
+
+/* --- Auth Forms --- */
+.auth-form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px;
+  background-color: #111111;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.auth-form h2 {
+  text-align: center;
+  font-size: 32px;
+  margin: 0 0 10px 0;
+  color: #FFFFFF;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-form input {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-size: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #62FFFF;
+}
+
+.auth-form .btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 18px;
+}
+
+.auth-form .error-message {
+  color: #FF6B6B;
+  text-align: center;
+  font-size: 14px;
+}
+
+.auth-form .switch-auth {
+  text-align: center;
+  color: var(--text-secondary-color);
+}
+
+.auth-form .switch-auth a {
+  color: #FFFFFF;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-form .switch-auth a:hover {
+  text-decoration: underline;
+}
+
+/* --- Navbar --- */
+.navbar {
+  /* Positioning */
+  position: sticky; /* Sticks to the top on scroll */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000; /* Ensures it stays on top of other content */
+  
+  /* Glassmorphism Effect */
+  background-color: rgba(10, 10, 10, 0.65); /* Dark background with 65% opacity */
+  backdrop-filter: blur(10px); /* This is the magic for the frosted glass effect */
+  -webkit-backdrop-filter: blur(10px); /* For Safari browser support */
+  
+  /* Styling */
+  border-bottom: 1px solid rgba(51, 51, 51, 0.5); /* Semi-transparent border */
+  padding: 16px 0; /* Adjusted vertical padding */
+  transition: background-color 0.3s ease;
+}
+
+.navbar:hover {
+  background-color: rgba(10, 10, 10, 0.8); /* Slightly less transparent on hover */
+}
+
+/* New rule for the inner container we added in the JSX */
+.navbar .navbar-content {
+  /* Centering the container itself */
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  
+  /* Spacing for content inside */
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+
+  /* Aligning the items inside (logo left, buttons right) */
+  display: flex;
+  align-items: center;
+  justify-content: space-between; 
+}
+
+/* ==========================================================================
+   3. METAVERSE / IN-GAME UI STYLES (Blue Eclipse Theme)
+   ========================================================================== */
+
+/* --- Game Layout --- */
 .app-root {
   height: 100vh;
   display: flex;
@@ -53639,7 +53859,7 @@ canvas {
   z-index: 100;
 }
 
-/* --- CHAT ICON BUTTON - Blue Eclipse Theme --- */
+/* --- CHAT ICON BUTTON --- */
 .chat-icon-button {
   width: 56px;
   height: 56px;
@@ -53660,7 +53880,7 @@ canvas {
   border-color: #ffffff;
 }
 
-/* --- BLUE ECLIPSE CHAT WINDOW --- */
+/* --- CHAT WINDOW --- */
 .chat-window-discord {
   width: 360px;
   height: 540px;
@@ -53673,7 +53893,7 @@ canvas {
   border: 1px solid #505081;
 }
 
-/* --- BLUE ECLIPSE HEADER --- */
+/* --- CHAT HEADER --- */
 .discord-header {
   height: 48px;
   background-color: #0F0E47;
@@ -53684,6 +53904,41 @@ canvas {
   padding: 0 16px;
   flex-shrink: 0;
   box-shadow: 0 2px 4px rgba(15, 14, 71, 0.5);
+}
+
+/* ADD THIS NEW RULE FOR THE LOGOUT BUTTON */
+.ui-button {
+  /* Positioning */
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 101;
+
+  /* Styling (fits the Blue Eclipse Theme) */
+  padding: 8px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #E0E0E0; /* Light text */
+  background-color: rgba(39, 39, 87, 0.7); /* Semi-transparent dark blue from your theme */
+  border: 1px solid #505081; /* Medium purple border */
+  border-radius: 8px;
+  cursor: pointer;
+  
+  /* Nice glass effect for the in-game UI */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.2s ease-in-out;
+}
+
+
+/* Clear 'danger' indication on hover */
+.ui-button:hover {
+  background-color: rgba(220, 53, 69, 0.9); /* Danger Red */
+  border-color: rgba(255, 100, 100, 0.8);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
 --------------------------------------------------
@@ -53957,8 +54212,7 @@ server\.env
 File type: no extension
 STREAM_API_KEY=4wxgh4zr2z4m
 STREAM_API_SECRET=euttu9jauvn8dw3f65juwr8gjhyeqb4f4hyjzysh6qfyu8kuhfsbhx5qq38fpmqj
-MONGO_URI="mongodb+srv://sauravshinde900_db_user:7eQ8Cwf6FHhWmcJu@metaverse-cluster.d1xps8b.mongodb.net/metaverseDB?retryWrites=true&w=majority"
-JWT_SECRET="a_very_secret_key"
+
 
 --------------------------------------------------
 File End
@@ -56200,17 +56454,27 @@ import authMiddleware from "../middleware/auth.js";
 
 const router = express.Router();
 
-const serverClient = StreamChat.getInstance(
-    process.env.STREAM_API_KEY,
-    process.env.STREAM_API_SECRET
-);
+const streamApiKey = process.env.STREAM_API_KEY;
+const streamApiSecret = process.env.STREAM_API_SECRET;
 
-// This route is now protected
+const serverClient = StreamChat.getInstance(streamApiKey, streamApiSecret);
+
 router.get("/get-token", authMiddleware, async (req, res) => {
     try {
-        const { username } = req.userData; // Get username from decoded token
+        const { username } = req.userData; // Get username from decoded JWT
+
+        // ✅ BEST PRACTICE: Ensure the user exists on Stream before creating a token.
+        // This prevents authentication issues on the client-side.
+        // 'upsertUser' will create the user if they don't exist, or update them if they do.
+        await serverClient.upsertUser({
+            id: username,   // The ID must match the ID you use on the client
+            name: username, // This is the display name in chat
+            // You can add other fields here, like 'role' or 'image'
+        });
+
         const token = serverClient.createToken(username);
 
+        // This logic is fine, it ensures the channel exists and the user is a member.
         const channel = serverClient.channel("messaging", "metaverse-room", {
             name: "Metaverse Lobby",
         });
@@ -56219,6 +56483,8 @@ router.get("/get-token", authMiddleware, async (req, res) => {
 
         res.json({ token });
     } catch (error) {
+        // ✅ ADDED: Better logging to help debug server-side issues.
+        console.error("Error in /get-stream-token:", error);
         res.status(500).json({ message: "Could not get Stream token." });
     }
 });
@@ -56267,7 +56533,8 @@ const userSchema = new mongoose.Schema({
     type: String, 
     enum: ['employee', 'admin', 'hr', 'ceo'], 
     default: 'employee' 
-  }
+  },
+  activeSocketId: { type: String, default: null }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -56281,28 +56548,52 @@ File End
 server\socket\socketHandler.js
 File type: .js
 // server/socket/socketHandler.js
+import User from '../models/User.js';
+
 export default (io) => {
   let players = {};
 
   io.on("connection", (socket) => {
     console.log("New connection:", socket.id);
 
-    players[socket.id] = { 
-      x: 1162, 
-      y: 1199,
-      anim: "idle-down"
-    };
-    
-    //socket.emit("players", players);
+    // MODIFIED: Listen for a player officially joining with their username
+    socket.on("joinGame", async (username) => { // ✅ 2. Make this function async
+      try {
+        const user = await User.findOne({ username });
+        if (!user) {
+          // This case should ideally not happen if auth is working, but it's good practice
+          console.error(`User '${username}' not found in database.`);
+          return;
+        }
 
-    // Listen for the client's request instead
-    socket.on("getPlayers", () => {
-      socket.emit("players", players);
-    });
-    
-    socket.broadcast.emit("playerJoined", {
-      id: socket.id,
-      ...players[socket.id]
+        // ✅ 3. Check for an existing active session
+        if (user.activeSocketId && user.activeSocketId !== socket.id) {
+          console.log(`User '${username}' already has an active session (${user.activeSocketId}). Disconnecting old session.`);
+          // Emit an event to the old socket telling it to disconnect
+          io.to(user.activeSocketId).emit('forceDisconnect', 'You have logged in from another device.');
+        }
+
+        // ✅ 4. Update the user's active socket ID in the database
+        user.activeSocketId = socket.id;
+        await user.save();
+
+        console.log(`${username} joined with ID: ${socket.id}`);
+        players[socket.id] = {
+          username: username,
+          x: 1162,
+          y: 1199,
+          anim: "idle-down",
+        };
+
+        socket.emit("players", players);
+        socket.broadcast.emit("playerJoined", {
+          id: socket.id,
+          ...players[socket.id],
+        });
+
+      } catch (error) {
+        console.error("Error during joinGame:", error);
+      }
     });
 
     socket.on("move", (data) => {
@@ -56310,19 +56601,35 @@ export default (io) => {
         players[socket.id].x = data.x;
         players[socket.id].y = data.y;
         players[socket.id].anim = data.anim;
-        
+
         socket.broadcast.emit("playerMoved", {
           id: socket.id,
           pos: { x: data.x, y: data.y },
-          anim: data.anim
+          anim: data.anim,
         });
       }
     });
 
-    socket.on("disconnect", () => {
-      console.log("Disconnected:", socket.id);
-      delete players[socket.id];
-      io.emit("playerLeft", socket.id);
+    socket.on("disconnect", async () => { // ✅ 5. Make this function async
+      if (players[socket.id]) {
+        console.log(`${players[socket.id].username} disconnected: ${socket.id}`);
+        try {
+          // ✅ 6. Clear the activeSocketId from the database on disconnect
+          const user = await User.findOne({ activeSocketId: socket.id });
+          if (user) {
+            user.activeSocketId = null;
+            await user.save();
+            console.log(`Cleared active session for ${user.username}`);
+          }
+        } catch (error) {
+          console.error("Error clearing socketId on disconnect:", error);
+        }
+
+        delete players[socket.id];
+        io.emit("playerLeft", socket.id);
+      } else {
+        console.log("Disconnected before joining:", socket.id);
+      }
     });
   });
 };

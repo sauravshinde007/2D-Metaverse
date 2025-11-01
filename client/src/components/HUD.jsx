@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Chat, Channel, Window, MessageList, MessageInput } from "stream-chat-react";
 import "stream-chat-react/dist/css/v2/index.css";
 import { useChat } from "../context/ChatContext";
-
+import PrivateChatManager from './PrivateChatManager';
 export default function HUD() {
     const { chatClient, channel, isConnecting } = useChat();
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -129,6 +129,15 @@ export default function HUD() {
     // Render the collapsed chat icon
     if (!isChatOpen) {
         return (
+            <div style={{ 
+                position: 'fixed', 
+                bottom: '20px', 
+                left: '20px', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '10px',
+                zIndex: 100 /* Ensure it's above game */
+            }}>
             <button className="chat-icon-button" onClick={toggleChat} title="Open Chat">
                 {isConnecting ? (
                     <div className="w-6 h-6 border-2 border-[#8686AC] border-t-transparent rounded-full animate-spin"></div>
@@ -138,6 +147,9 @@ export default function HUD() {
                     </svg>
                 )}
             </button>
+
+            <PrivateChatManager />
+            </div>
         );
     }
 
