@@ -1,70 +1,93 @@
-// src/context/ChatContext.jsx
-
+// client/src/context/ChatContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import { StreamChat } from 'stream-chat';
+import { useAuth } from './AuthContext';
 
 const apiKey = import.meta.env.VITE_STREAM_API_KEY;
-const socketServerUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
+const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
 
 const ChatContext = createContext(null);
 
 export const ChatProvider = ({ children }) => {
-  const [chatClient, setChatClient] = useState(null);
-  const [channel, setChannel] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(true);
+    const [chatClient, setChatClient] = useState(null);
+    const [channel, setChannel] = useState(null);
+    const [isConnecting, setIsConnecting] = useState(true);
+    const { user, token } = useAuth();
 
-  useEffect(() => {
-    const client = StreamChat.getInstance(apiKey);
+    useEffect(() => {
+        // This is the main connection and cleanup logic
+        let client;
+        let didAbort = false;
 
-    const initChat = async () => {
-      if (client.userID) {
-        setChatClient(client);
-        // If we already have a client, we likely have a channel too.
-        // This part can be enhanced if channel logic becomes more complex.
-        if (client.activeChannels) {
-            const mainChannel = Object.values(client.activeChannels).find(ch => ch.id === 'metaverse-room');
-            if (mainChannel) setChannel(mainChannel);
-        }
-        setIsConnecting(false);
-        return;
-      }
-      
-      try {
-        const userId = "user_" + Math.floor(Math.random() * 1000);
-        const res = await fetch(`${socketServerUrl}/get-token/${userId}`);
-        const data = await res.json();
-        
-        await client.connectUser({ id: userId, name: userId }, data.token);
+        const initChat = async () => {
+            if (!user || !token) {
+                setIsConnecting(false);
+                return; // Not ready to connect
+            }
 
-        const mainChannel = client.channel("messaging", "metaverse-room", {
-          name: "Metaverse Lobby",
-        });
+            setIsConnecting(true);
+            client = StreamChat.getInstance(apiKey);
 
-        await mainChannel.watch({ presence: true });
+            try {
+                // Fetch the user token from your backend
+                const response = await fetch(`${serverUrl}/api/stream/get-token`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-        setChatClient(client);
-        setChannel(mainChannel);
-      } catch (error) {
-          console.error("Failed to initialize chat:", error);
-      } finally {
-          setIsConnecting(false);
-      }
-    };
+                if (didAbort) return;
 
-    initChat();
+                if (!response.ok) {
+                    throw new Error(`Failed to get Stream token: ${response.statusText}`);
+                }
 
-    return () => {
-      // Don't disconnect user on component unmount,
-      // as it might be a simple re-render. 
-      // Disconnection should be handled on window close or logout.
-    };
-  }, []);
+                const data = await response.json();
 
-  return (
-    <ChatContext.Provider value={{ chatClient, channel, isConnecting }}>
-      {children}
-    </ChatContext.Provider>
-  );
+                // Connect the user to Stream
+                await client.connectUser(
+                    { id: user.username, name: user.username, role: user.role },
+                    data.token
+                );
+                
+                if (didAbort) return;
+
+                // Get and watch the main channel
+                const mainChannel = client.channel("messaging", "metaverse-room", { name: "Metaverse Lobby" });
+                await mainChannel.watch();
+
+                setChatClient(client);
+                setChannel(mainChannel);
+
+            } catch (error) {
+                console.error("Failed to initialize chat:", error);
+                // On error, ensure we clear the state
+                setChatClient(null);
+                setChannel(null);
+            } finally {
+                if (!didAbort) {
+                    setIsConnecting(false);
+                }
+            }
+        };
+
+        initChat();
+
+        // Cleanup function
+        return () => {
+            didAbort = true;
+            if (client) {
+                client.disconnectUser();
+            }
+            setChatClient(null);
+            setChannel(null);
+            setIsConnecting(true);
+        };
+    }, [user, token]); // Rerun this entire effect if the user or token changes
+
+    return (
+        <ChatContext.Provider value={{ chatClient, channel, isConnecting }}>
+            {children}
+        </ChatContext.Provider>
+    );
 };
 
 export const useChat = () => useContext(ChatContext);
