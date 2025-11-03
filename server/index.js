@@ -11,6 +11,7 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import mongoose from "mongoose";
+import { ExpressPeerServer } from "peer";
 
 // Import separated logic
 import socketHandler from "./socket/socketHandler.js";
@@ -21,6 +22,23 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // Middleware to parse JSON bodies
 const server = http.createServer(app);
+
+// --- PeerJS Server Setup ---
+const peerServer = ExpressPeerServer(server, {
+  debug: true,
+  path: '/',
+  allow_discovery: true,
+});
+
+app.use('/peerjs', peerServer);
+
+peerServer.on('connection', (client) => {
+  console.log(`✅ PeerJS client connected: ${client.getId()}`);
+});
+
+peerServer.on('disconnect', (client) => {
+  console.log(`❌ PeerJS client disconnected: ${client.getId()}`);
+});
 
 // --- Database Connection ---
 mongoose.connect(process.env.MONGO_URI)

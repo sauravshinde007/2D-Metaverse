@@ -41,6 +41,30 @@ const socketService = {
     }
   },
 
+  emitNearbyPlayers(nearbyPlayersData) {
+    if (socket) {
+      socket.emit("nearbyPlayers", nearbyPlayersData);
+    }
+  },
+
+  registerPeerId(peerId) {
+    if (socket) {
+      socket.emit("registerPeerId", peerId);
+    }
+  },
+
+  onInitiateProximityCalls(callback) {
+    if (socket) {
+      socket.on("initiateProximityCalls", callback);
+    }
+  },
+
+  onPlayerInProximity(callback) {
+    if (socket) {
+      socket.on("playerInProximity", callback);
+    }
+  },
+
   onPlayers(callback) {
     if (socket) {
       socket.on("players", callback);

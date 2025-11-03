@@ -1,6 +1,7 @@
 // client/src/phaser/index.js
 import Phaser from "phaser";
 import WorldScene from "./scenes/World";
+import PhaserRaycaster from 'phaser-raycaster'
 // TestScene is not used in this flow, so it can be removed if not needed elsewhere
 // import TestScene from "./scenes/Test";
 
@@ -35,6 +36,15 @@ export default function startGame(username) {
     },
     // MODIFICATION: The scene is no longer auto-started here
     scene: [],
+    plugins: {
+      scene: [
+        {
+          key: 'PhaserRaycaster',
+          plugin: PhaserRaycaster,
+          mapping: 'raycasterPlugin'
+        }
+      ]
+    }
   };
 
   const game = new Phaser.Game(config);

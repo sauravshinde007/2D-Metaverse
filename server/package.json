@@ -20,6 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
     "nodemon": "^3.1.10",
+    "peer": "^1.0.2",
+    "peerjs": "^1.5.5",
     "socket.io": "^4.8.1",
     "stream-chat": "^9.18.1"
   }

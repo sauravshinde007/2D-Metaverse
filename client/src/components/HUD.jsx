@@ -107,8 +107,13 @@ export default function HUD() {
         if (!chatClient || !channel) {
             return (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#8686AC' }}>
-                    <p style={{ fontWeight: 'bold', color: 'white' }}>Connection Failed</p>
-                    <p>Could not connect to the chat service. Please try refreshing the page.</p>
+                    <p style={{ fontWeight: 'bold', color: 'white' }}>Chat Unavailable</p>
+                    <p style={{ fontSize: '14px', marginTop: '10px' }}>
+                        Chat service is not configured or unavailable.
+                    </p>
+                    <p style={{ fontSize: '12px', marginTop: '5px', color: '#6b6b8a' }}>
+                        Check the console for more details.
+                    </p>
                 </div>
             );
         }

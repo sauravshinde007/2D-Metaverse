@@ -61,6 +61,46 @@ export default (io) => {
       }
     });
 
+    // Handle nearby players data from client
+    socket.on("nearbyPlayers", (data) => {
+      console.log(`Player ${socket.id} has ${data.count} nearby players`);
+      
+      if (players[socket.id]) {
+        // Store nearby players for this player
+        players[socket.id].nearbyPlayers = data.nearbyPlayers;
+        
+        // Send peer connection info to initiate video/audio calls
+        // The client will use this to establish PeerJS connections
+        socket.emit("initiateProximityCalls", {
+          nearbyPlayers: data.nearbyPlayers.map(p => ({
+            id: p.id,
+            username: p.username,
+            distance: p.distance
+          }))
+        });
+        
+        // Notify each nearby player about this player's proximity
+        data.nearbyPlayers.forEach(nearbyPlayer => {
+          const nearbyPlayerId = nearbyPlayer.id;
+          if (players[nearbyPlayerId]) {
+            io.to(nearbyPlayerId).emit("playerInProximity", {
+              id: socket.id,
+              username: players[socket.id].username,
+              distance: nearbyPlayer.distance
+            });
+          }
+        });
+      }
+    });
+
+    // Handle peer ID registration for video/audio calls
+    socket.on("registerPeerId", (peerId) => {
+      if (players[socket.id]) {
+        players[socket.id].peerId = peerId;
+        console.log(`Registered PeerID ${peerId} for ${players[socket.id].username}`);
+      }
+    });
+
     socket.on("disconnect", async () => { // ✅ 5. Make this function async
       if (players[socket.id]) {
         console.log(`${players[socket.id].username} disconnected: ${socket.id}`);

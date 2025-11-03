@@ -21,14 +21,29 @@ export const ChatProvider = ({ children }) => {
 
         const initChat = async () => {
             if (!user || !token) {
+                console.log('Chat: Waiting for user and token...');
                 setIsConnecting(false);
                 return; // Not ready to connect
+            }
+
+            if (!apiKey) {
+                console.warn('Chat: VITE_STREAM_API_KEY not set. Chat will be disabled.');
+                setIsConnecting(false);
+                return;
             }
 
             setIsConnecting(true);
             client = StreamChat.getInstance(apiKey);
 
             try {
+                // Check if already connected to prevent multiple connections
+                if (client.userID) {
+                    console.log('Chat: Already connected, skipping re-initialization');
+                    setChatClient(client);
+                    setIsConnecting(false);
+                    return;
+                }
+
                 // Fetch the user token from your backend
                 const response = await fetch(`${serverUrl}/api/stream/get-token`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -37,7 +52,9 @@ export const ChatProvider = ({ children }) => {
                 if (didAbort) return;
 
                 if (!response.ok) {
-                    throw new Error(`Failed to get Stream token: ${response.statusText}`);
+                    console.warn(`Chat service unavailable: ${response.statusText}`);
+                    console.log('Continuing without chat functionality...');
+                    return;
                 }
 
                 const data = await response.json();
@@ -56,9 +73,11 @@ export const ChatProvider = ({ children }) => {
 
                 setChatClient(client);
                 setChannel(mainChannel);
+                console.log('✅ Chat initialized successfully');
 
             } catch (error) {
-                console.error("Failed to initialize chat:", error);
+                console.warn("Chat initialization skipped:", error.message);
+                console.log('The metaverse will work without chat functionality.');
                 // On error, ensure we clear the state
                 setChatClient(null);
                 setChannel(null);
@@ -74,8 +93,8 @@ export const ChatProvider = ({ children }) => {
         // Cleanup function
         return () => {
             didAbort = true;
-            if (client) {
-                client.disconnectUser();
+            if (client && client.userID) {
+                client.disconnectUser().catch(console.error);
             }
             setChatClient(null);
             setChannel(null);
