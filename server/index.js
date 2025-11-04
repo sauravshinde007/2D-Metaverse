@@ -16,7 +16,7 @@ import mongoose from "mongoose";
 import socketHandler from "./socket/socketHandler.js";
 import authRoutes from "./api/auth.js";
 import streamApiRoutes from "./api/stream.js";
-
+import usersRoute from './routes/users.js';
 const app = express();
 app.use(cors());
 app.use(express.json()); // Middleware to parse JSON bodies
@@ -36,7 +36,7 @@ const PORT = 3001;
 // --- API Routes ---
 app.use("/api/auth", authRoutes); // Authentication routes (signup/login)
 app.use("/api/stream", streamApiRoutes); // Stream Chat related routes
-
+app.use('/api/users', usersRoute);
 // --- Socket.IO Connection Handling ---
 socketHandler(io);
 
