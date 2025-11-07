@@ -27,31 +27,56 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="auth-container">
-      <form onSubmit={handleSubmit} className="auth-form">
-        <h2>Login</h2>
-        <div className="input-group">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-            required
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-          />
-        </div>
-        {error && <p className="error-message">{error}</p>}
-        <button type="submit" className="btn btn-primary">Log In</button>
-        <p className="switch-auth">
-          Don't have an account? <Link to="/signup">Sign Up</Link>
-        </p>
-      </form>
+    // 2. Use the wrapper for the background and centering
+    <div className="homepage-wrapper auth-page">
+      {/* 3. Add blobs for the background */}
+      <div className="blob blob-1"></div>
+      <div className="blob blob-2"></div>
+
+      <Link to="/" className="back-link">
+        &lt; Back to Home
+      </Link>
+
+      {/* 4. This container is now the styled "card" */}
+      <div className="auth-container">
+        <form onSubmit={handleSubmit} className="auth-form">
+          <h2>Welcome Back!</h2>
+          <p className="auth-subtitle">We're so excited to see you again!</p>
+          
+          <div className="input-group">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="input-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          
+          {error && <p className="error-message">{error}</p>}
+          
+          {/* 5. Use the themed button class */}
+          <button type="submit" className="btn btn-secondary">
+            Log In
+          </button>
+          
+          <p className="switch-auth">
+            Need an account? <Link to="/signup">Register</Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 };

@@ -1,23 +1,20 @@
-// client/src/components/HUD.jsx
+// client/src/components/WorldChat.jsx
 
 import { useEffect, useState, useRef } from "react";
 import { Chat, Channel, Window, MessageList, MessageInput } from "stream-chat-react";
 import "stream-chat-react/dist/css/v2/index.css";
-import { useChat } from "../context/ChatContext";
-import PrivateChatManager from './PrivateChatManager';
-export default function HUD() {
-    const { chatClient, channel, isConnecting } = useChat();
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const chatContainerRef = useRef(null);
 
+// This component receives the chat state and a close handler from HUD
+export default function WorldChat({ chatClient, channel, isConnecting, onClose }) {
+    const chatContainerRef = useRef(null);
     const [onlineCount, setOnlineCount] = useState(0);
     const [chatFocused, setChatFocused] = useState(false);
     const chatFocusedRef = useRef(chatFocused);
-    
-    useEffect(() => { 
-        chatFocusedRef.current = chatFocused; 
+
+    useEffect(() => {
+        chatFocusedRef.current = chatFocused;
     }, [chatFocused]);
-    
+
     // Effect for tracking online presence count
     useEffect(() => {
         if (!channel) return;
@@ -27,15 +24,14 @@ export default function HUD() {
             setOnlineCount(online.length);
         };
         updateCount(); // Initial count
-        
+
         channel.on("presence.diff", updateCount);
         return () => channel.off("presence.diff", updateCount);
     }, [channel]);
-    
-    // Effect for managing chat focus to avoid interfering with game controls
-    useEffect(() => {
-        if (!isChatOpen) return;
 
+    // Effect for managing chat focus to avoid interfering with game controls
+    // This effect runs when the component mounts (i.e., when chat is opened)
+    useEffect(() => {
         const dispatchFocusChange = (isFocused) => {
             if (chatFocusedRef.current === isFocused) return;
             setChatFocused(isFocused);
@@ -43,7 +39,7 @@ export default function HUD() {
                 new CustomEvent("chat-focus-change", { detail: { focused: isFocused } })
             );
         };
-        
+
         const handleClickOutside = (event) => {
             if (chatContainerRef.current && !chatContainerRef.current.contains(event.target)) {
                 if (chatFocusedRef.current) {
@@ -53,13 +49,13 @@ export default function HUD() {
                 }
             }
         };
-        
+
         const handleInputFocus = (e) => {
             if (e.target.tagName === 'TEXTAREA') {
                 dispatchFocusChange(true);
             }
         };
-        
+
         const handleInputBlur = (e) => {
             if (e.target.tagName === 'TEXTAREA') {
                 setTimeout(() => {
@@ -71,27 +67,17 @@ export default function HUD() {
                 }, 100);
             }
         };
-        
+
         document.addEventListener("mousedown", handleClickOutside);
         document.addEventListener("focusin", handleInputFocus);
         document.addEventListener("focusout", handleInputBlur);
-        
+
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
             document.removeEventListener("focusin", handleInputFocus);
             document.removeEventListener("focusout", handleInputBlur);
         };
-    }, [isChatOpen]);
-    
-    const toggleChat = (e) => {
-        e.stopPropagation();
-        const willBeOpen = !isChatOpen;
-        setIsChatOpen(willBeOpen);
-        if (!willBeOpen) {
-            setChatFocused(false);
-            window.dispatchEvent(new CustomEvent("chat-focus-change", { detail: { focused: false } }));
-        }
-    };
+    }, []); // Empty dependency array: runs on mount, cleans up on unmount
 
     // Helper function to render the correct state of the chat body
     const renderChatContent = () => {
@@ -103,7 +89,6 @@ export default function HUD() {
             );
         }
 
-        // This is the crucial error handling state
         if (!chatClient || !channel) {
             return (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#8686AC' }}>
@@ -113,7 +98,6 @@ export default function HUD() {
             );
         }
 
-        // Success state: Render the chat
         return (
             <Chat client={chatClient}>
                 <Channel channel={channel}>
@@ -125,33 +109,6 @@ export default function HUD() {
             </Chat>
         );
     };
-
-    // Render the collapsed chat icon
-    if (!isChatOpen) {
-        return (
-            <div style={{ 
-                position: 'fixed', 
-                bottom: '20px', 
-                left: '20px', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '10px',
-                zIndex: 100 /* Ensure it's above game */
-            }}>
-            <button className="chat-icon-button" onClick={toggleChat} title="Open Chat">
-                {isConnecting ? (
-                    <div className="w-6 h-6 border-2 border-[#8686AC] border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                )}
-            </button>
-
-            <PrivateChatManager />
-            </div>
-        );
-    }
 
     // Render the expanded chat window
     return (
@@ -186,7 +143,7 @@ export default function HUD() {
                     </div>
                     
                     <button
-                        onClick={toggleChat}
+                        onClick={onClose} // Use the prop to close
                         style={{
                             width: '32px', height: '32px', display: 'flex', alignItems: 'center',
                             justifyContent: 'center', background: 'transparent', border: 'none',

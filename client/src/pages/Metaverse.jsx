@@ -3,12 +3,12 @@
 import { useEffect } from "react";
 import "../styles/App.css";
 import startGame from "../phaser";
-import HUD from "../components/HUD";
+import Sidebar from "../components/Sidebar";
 import { ChatProvider } from "../context/ChatContext";
 import { useAuth } from "../context/AuthContext";
 
 function Metaverse() {
-    const { logout, user } = useAuth(); // We still need logout for the button
+    const { user } = useAuth(); // We still need logout for the button
 
     useEffect(() => {
         if (user && user.username) {
@@ -27,15 +27,7 @@ function Metaverse() {
         <ChatProvider>
             <div className="app-root">
                 <div id="game-container" className="game-container" />
-                <div className="hud-root">
-                    <HUD />
-                </div>
-                <button 
-                    onClick={logout}
-                    className="ui-button"
-                >
-                    Logout
-                </button>
+                <Sidebar />
             </div>
         </ChatProvider>
     );

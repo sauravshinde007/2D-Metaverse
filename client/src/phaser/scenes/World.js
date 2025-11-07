@@ -72,7 +72,7 @@ export default class WorldScene extends Phaser.Scene {
     this.lastDirection = "down";
     this.currentAnimation = "idle-down";
     this.cameras.main.startFollow(this.player);
-    this.cameras.main.setZoom(1);
+    this.cameras.main.setZoom(1.5);
     this.inputManager = new InputManager(this);
     this.setupInputHandlers();
     socketService.onPlayers((players) => {

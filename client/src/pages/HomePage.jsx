@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom';
+import '../styles/HomePage.css'; // 1. Import the new stylesheet
 
 const HomePage = () => {
   return (
-    // Use a React Fragment <> to return multiple elements
-    <>
-      <header className="navbar">
-        {/* This new inner div will center the content */}
+    // This wrapper will hold the background and blobs
+    <div className="homepage-wrapper">
+      {/* 2. Add the floating blobs */}
+      <div className="blob blob-1"></div>
+      <div className="blob blob-2"></div>
+
+      <header className="homepage-navbar">
         <div className="navbar-content">
           <a href="/" className="logo">
             Metaverse
@@ -21,26 +25,28 @@ const HomePage = () => {
         </div>
       </header>
 
-      {/* The landing-container now only wraps the main content */}
-      <div className="landing-container">
+      {/* 3. The hero-container will be centered on top */}
+      <div className="hero-container">
         <main>
           <section className="hero">
             <h1>
-              Your Office Metaverse
+              Your Collaborative Space
               <br />
-              <span className="gradient-text">for Work, At Scale.</span>
+              <span className="gradient-text">for Remote Collaborations.</span>
             </h1>
             <p className="subtitle">
-              The leading open-source, decentralized platform for running your virtual office in production.
+              A metaverse platform for building shared, collaborative spaces.
+              Create virtual hubs for teamwork and learning, like online offices 
+              or digital libraries.
             </p>
             <div className="hero-buttons">
               <Link to="/signup" className="btn btn-primary">Get Started</Link>
-              <Link to="/login" className="btn btn-secondary">Login to Your Office</Link>
+              <Link to="/login" className="btn btn-secondary">Login to Your Space</Link>
             </div>
           </section>
         </main>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -1,0 +1,83 @@
+/* client/src/components/ChatSidebar.css */
+
+.chat-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 72px; 
+    height: 100vh;
+    background-color: #0F0E47; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+    border-right: 1px solid #505081;
+    
+    /* Add/Update these properties */
+    justify-content: space-between; /* This is the magic */
+    padding: 12px 0; /* Add vertical padding */
+    box-sizing: border-box; /* Good practice */
+}
+
+/* New class for the top group of icons */
+.sidebar-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* New class for the bottom group of icons */
+.sidebar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-icon-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #2D2D5B;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.sidebar-icon-button:hover {
+    border-radius: 16px;
+    background-color: #505081;
+}
+
+.sidebar-icon-button.active {
+    border-radius: 16px;
+    background-color: #7272E0;
+}
+
+.sidebar-icon-button .h-6 {
+    width: 24px;
+    height: 24px;
+}
+
+.chat-panel-container {
+    position: fixed;
+    left: 72px;
+    top: 0;
+    width: 380px; 
+    height: 100vh;
+    z-index: 99;
+}
+
+.private-chat-fullscreen-container {
+  position: fixed;
+  left: 72px; /* Start AFTER the 72px sidebar */
+  top: 0;
+  width: calc(100vw - 72px); /* Fill the rest of the screen */
+  height: 100vh;
+  z-index: 99; /* Sits behind the sidebar, same level as the world chat panel */
+}

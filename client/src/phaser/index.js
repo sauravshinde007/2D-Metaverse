@@ -33,7 +33,10 @@ export default function startGame(username) {
         debug: false,
       },
     },
-    // MODIFICATION: The scene is no longer auto-started here
+    render: {
+      pixelArt: true,
+    },
+    canvasStyle: "image-rendering: pixelated;",
     scene: [],
   };
 

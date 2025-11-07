@@ -1,0 +1,156 @@
+/* client/src/styles/PrivateChatManager.css */
+/* NEW THEME using CSS Variables (bug-free) */
+
+/* --- Custom Layout Styles (Keep As-Is) --- */
+.private-chat-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+.private-chat-sidebar {
+  width: 240px;
+  background: #0f0e47; 
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #505081;
+}
+.private-chat-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #505081; 
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(15, 14, 71, 0.5);
+}
+.private-chat-header h4 {
+  margin: 0;
+  font-weight: 600;
+  color: #ffffff;
+  flex: 1;
+  text-align: center;
+}
+.private-chat-header button {
+  background: none;
+  border: none;
+  color: #8686ac;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 24px;
+  text-align: center;
+}
+.private-chat-header button:hover {
+  color: #ffffff;
+}
+.private-chat-header .back-button {
+  font-size: 20px;
+  text-align: left;
+}
+.new-chat-button {
+  width: 100%;
+  background-color: #505081;
+  color: white;
+  border: 1px solid #8686ac;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+.new-chat-button:hover {
+  background-color: #8686ac;
+}
+.user-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.user-list-body {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.user-list-body li {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+.user-list-body li:hover {
+  background-color: #505081;
+}
+.list-info-text {
+  padding: 12px 16px;
+  color: #8686ac;
+}
+.error-text {
+  color: #f04747;
+  padding: 12px 16px;
+  font-weight: 500;
+}
+.private-chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.str-chat__message-text {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* --- NEW: Stream Theme Overrides (CSS Variables) --- */
+/* This one block replaces all the broken .str-chat__... rules */
+.private-chat-panel .str-chat__theme-dark {
+  /* Main background colors */
+  --str-chat__bg-color: #272757;
+  --str-chat__channel-list-bg-color: #0f0e47;
+
+  /* Channel preview (sidebar list) */
+  --str-chat__channel-preview-bg-color: transparent;
+  --str-chat__channel-preview-bg-color-hover: #505081;
+  --str-chat__channel-preview-bg-color-active: #272757;
+  --str-chat__channel-preview-border: 1px solid #505081;
+
+  /* Text colors */
+  --str-chat__text-color: #e0e0e0;
+  --str-chat__text-input-color: #ffffff; /* This fixes the bug */
+  --str-chat__text-input-placeholder-color: #8686ac;
+
+  /* Message input */
+  --str-chat__input-bg: #0f0e47;
+  --str-chat__input-bg-color: #0f0e47;
+  --str-chat__input-wrapper-border: 1px solid #505081;
+  --str-chat__input-wrapper-border-focus: 1px solid #8686ac;
+  --str-chat__input-flat-wrapper-bg-color: #0f0e47;
+
+  /* Message hover */
+  --str-chat__message-bg-color-hover: rgba(15, 14, 71, 0.5);
+
+  /* Other colors */
+  --str-chat__avatar-bg-color: #505081;
+  --str-chat__primary-color: #e0e0e0;
+}
+
+
+/* --- Keep These: Hiding Stream's Default UI --- */
+.private-chat-window .str-chat__channel-header,
+.private-chat-window .str-chat__input-flat-emojiselect,
+.private-chat-window .str-chat__send-button,
+.private-chat-window .str-chat__message-simple-status {
+  display: none !important;
+}
+
+/* This is needed to make the input fill the space */
+.private-chat-window .str-chat__input-flat {
+  background-color: #272757 !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* This is needed to give the input margin */
+.private-chat-window .str-chat__input-flat-wrapper {
+   margin: 16px !important;
+}

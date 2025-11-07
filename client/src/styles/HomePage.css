@@ -1,0 +1,163 @@
+/* client/src/styles/HomePage.css */
+
+.homepage-wrapper {
+  /*
+    ADDED: 'Whitney' is Discord's font. Added it as the first choice.
+    Your 'Poppins' is kept as a fallback.
+  */
+  font-family: "Whitney", "Poppins", sans-serif;
+
+  /* ORIGINAL homepage background */
+  background: radial-gradient(ellipse at 50% 0%, #5865f2 0%, #0a0a0a 85%);
+  color: #dcddde;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Navbar Styling (Glass Effect) --- */
+.homepage-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px 40px;
+  box-sizing: border-box;
+  z-index: 10;
+  background-color: rgba(15, 14, 71, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(80, 80, 129, 0.3);
+}
+.navbar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1260px;
+  margin: 0 auto;
+}
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  text-decoration: none;
+}
+.nav-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+/* --- Hero Content Styling --- */
+.hero-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  padding: 0 24px;
+  padding-top: 80px;
+}
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 800px;
+}
+.hero h1 {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 56px;
+  color: #ffffff;
+  line-height: 1.2;
+  margin: 0;
+}
+.hero .gradient-text {
+  color: #7272e0;
+}
+.hero .subtitle {
+  font-size: 20px;
+  color: #b9bbbe;
+  margin-top: 24px;
+  line-height: 1.6;
+  max-width: 600px;
+  font-weight: 400;
+}
+.hero .hero-buttons {
+  display: flex;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+/* --- Shared Button Styling --- */
+/* NOTE: AuthPage.css will override .btn-secondary, which is correct */
+.btn {
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 28px;
+  padding: 10px 24px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  font-family: "Poppins", sans-serif;
+}
+.btn-primary {
+  background-color: #ffffff;
+  color: #23272a;
+}
+.btn-primary:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  color: #505081;
+}
+.btn-secondary {
+  background-color: #505081;
+  color: #ffffff;
+}
+.btn-secondary:hover {
+  background-color: #7272e0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Floating Blobs (FOR HOMEPAGE) --- */
+.blob {
+  position: absolute;
+  background: linear-gradient(45deg, #505081, #7272e0);
+  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  animation: float-anim 15s infinite ease-in-out;
+  z-index: 1;
+  opacity: 0.5;
+}
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  top: -150px;
+  left: -100px;
+  animation-duration: 20s;
+}
+.blob-2 {
+  width: 300px;
+  height: 300px;
+  bottom: -100px;
+  right: -50px;
+  animation-duration: 15s;
+  animation-delay: 3s;
+}
+@keyframes float-anim {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+  50% {
+    transform: translate(50px, 80px) rotate(180deg);
+    border-radius: 60% 40% 50% 50% / 40% 60% 40% 60%;
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(0, 0) rotate(360deg);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  }
+}
