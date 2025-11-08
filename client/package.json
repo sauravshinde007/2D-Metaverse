@@ -12,7 +12,9 @@
   "dependencies": {
     "@stream-io/video-react-sdk": "^1.20.1",
     "axios": "^1.13.1",
+    "peerjs": "^1.5.5",
     "phaser": "^3.90.0",
+    "phaser-raycaster": "^0.10.11",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.5",

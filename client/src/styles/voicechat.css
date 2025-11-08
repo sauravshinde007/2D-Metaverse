@@ -1,0 +1,163 @@
+/* client/src/styles/voicechat.css */
+.voice-chat-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #4CAF50;
+  border-radius: 12px;
+  padding: 15px;
+  color: white;
+  font-family: Arial, sans-serif;
+  z-index: 1000;
+  min-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.voice-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.voice-chat-title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.active-calls-badge {
+  background: #4CAF50;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.voice-chat-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.mic-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  font-size: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.mic-button.active {
+  background: #4CAF50;
+}
+
+.mic-button.active:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.mic-button.muted {
+  background: #f44336;
+}
+
+.mic-button.muted:hover {
+  background: #da190b;
+  transform: scale(1.05);
+}
+
+.mic-button.enable {
+  background: #2196F3;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  font-size: 24px;
+  width: 80px;
+  height: 80px;
+}
+
+.mic-button.enable:hover {
+  background: #0b7dda;
+  transform: scale(1.05);
+}
+
+.transmission-status {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.status-transmitting {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4CAF50;
+  color: #4CAF50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4CAF50;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
+}
+
+.status-muted {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid #f44336;
+  color: #f44336;
+}
+
+.status-ready {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #aaa;
+}
+
+.permission-warning {
+  background: #ff9800;
+  color: white;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 5px;
+}
+
+.active-calls-info {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  color: #4CAF50;
+}
+
+.active-calls-info small {
+  font-size: 12px;
+}

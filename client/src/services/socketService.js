@@ -7,17 +7,20 @@ let socket = null;
 
 const socketService = {
   connect() {
-    if (socket && socket.connected) {
-      return;
-    }
+    if (socket && socket.connected) return;
+
     console.log("🔌 Connecting to socket server...");
     socket = io(SOCKET_URL);
-    socket.on("connect", () => console.log("✅ Socket connected with ID:", socket.id));
-    socket.on("disconnect", () => console.log("❌ Socket disconnected."));
+
+    socket.on("connect", () =>
+      console.log("✅ Socket connected with ID:", socket.id)
+    );
+    socket.on("disconnect", () =>
+      console.log("❌ Socket disconnected.")
+    );
   },
 
-  // ✅ ADDED: A generic method to listen to any socket event.
-  // This is crucial for allowing AuthContext to listen for 'forceDisconnect'.
+  // ✅ Generic event listener (important for forceDisconnect, etc.)
   on(eventName, callback) {
     if (socket) {
       socket.on(eventName, callback);
@@ -35,40 +38,47 @@ const socketService = {
     }
   },
 
+  // ====== EMIT EVENTS ======
   emitMove(positionData) {
-    if (socket) {
-      socket.emit("move", positionData);
-    }
+    socket?.emit("move", positionData);
   },
 
+  emitNearbyPlayers(nearbyPlayersData) {
+    socket?.emit("nearbyPlayers", nearbyPlayersData);
+  },
+
+  registerPeerId(peerId) {
+    socket?.emit("registerPeerId", peerId);
+  },
+
+  // ====== LISTEN EVENTS ======
   onPlayers(callback) {
-    if (socket) {
-      socket.on("players", callback);
-    }
+    socket?.on("players", callback);
   },
-  
+
   onPlayerJoined(callback) {
-    if (socket) {
-      socket.on("playerJoined", callback);
-    }
+    socket?.on("playerJoined", callback);
   },
-  
+
   onPlayerMoved(callback) {
-    if (socket) {
-      socket.on("playerMoved", callback);
-    }
+    socket?.on("playerMoved", callback);
   },
-  
+
   onPlayerLeft(callback) {
-    if (socket) {
-      socket.on("playerLeft", callback);
-    }
+    socket?.on("playerLeft", callback);
   },
-  
+
+  onInitiateProximityCalls(callback) {
+    socket?.on("initiateProximityCalls", callback);
+  },
+
+  onPlayerInProximity(callback) {
+    socket?.on("playerInProximity", callback);
+  },
+
+  // ====== CLEANUP ======
   removeAllListeners() {
-      if (socket) {
-          socket.removeAllListeners();
-      }
+    socket?.removeAllListeners();
   }
 };
 

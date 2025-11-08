@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import "../styles/App.css";
 import startGame from "../phaser";
 import Sidebar from "../components/Sidebar";
+import VoiceChat from "../components/VoiceChat";
 import { ChatProvider } from "../context/ChatContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -28,6 +29,8 @@ function Metaverse() {
             <div className="app-root">
                 <div id="game-container" className="game-container" />
                 <Sidebar />
+                <VoiceChat />
+                
             </div>
         </ChatProvider>
     );

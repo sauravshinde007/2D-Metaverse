@@ -11,36 +11,54 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import mongoose from "mongoose";
+import { ExpressPeerServer } from "peer";
 
 // Import separated logic
 import socketHandler from "./socket/socketHandler.js";
 import authRoutes from "./api/auth.js";
 import streamApiRoutes from "./api/stream.js";
-import usersRoute from './routes/users.js';
+import usersRoute from "./routes/users.js";
+
 const app = express();
 app.use(cors());
-app.use(express.json()); // Middleware to parse JSON bodies
+app.use(express.json());
+
 const server = http.createServer(app);
 
-// --- Database Connection ---
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("MongoDB connection error:", err));
+// --- PeerJS Server Setup ---
+const peerServer = ExpressPeerServer(server, {
+  debug: true,
+  path: "/",
+  allow_discovery: true,
+});
+app.use("/peerjs", peerServer);
 
-const io = new Server(server, {
-  cors: { origin: "*" },
+peerServer.on("connection", (client) => {
+  console.log(`✅ PeerJS client connected: ${client.getId()}`);
+});
+peerServer.on("disconnect", (client) => {
+  console.log(`❌ PeerJS client disconnected: ${client.getId()}`);
 });
 
-const PORT = 3001;
+// --- Database Connection ---
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// --- Socket.IO ---
+const io = new Server(server, { cors: { origin: "*" } });
 
 // --- API Routes ---
-app.use("/api/auth", authRoutes); // Authentication routes (signup/login)
+app.use("/api/auth", authRoutes);        // Authentication routes (signup/login)
 app.use("/api/stream", streamApiRoutes); // Stream Chat related routes
-app.use('/api/users', usersRoute);
+app.use("/api/users", usersRoute);       // Users routes
+
 // --- Socket.IO Connection Handling ---
 socketHandler(io);
 
 // --- Start Server ---
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`✅ Server running on PORT ${PORT}`);
 });
