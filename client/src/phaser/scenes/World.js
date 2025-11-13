@@ -11,6 +11,7 @@ export default class WorldScene extends Phaser.Scene {
     this.raycasterPlugin = null;
     this.audioElements = {}; // peerId -> HTMLAudioElement
     this.currentNearbyPlayers = new Set(); // track active proximity calls
+    this.playerUsernames = new Map();
   }
 
   init(data) {
@@ -151,6 +152,7 @@ export default class WorldScene extends Phaser.Scene {
       if (this.players[id]) {
         this.players[id].destroy();
         delete this.players[id];
+        this.playerUsernames.delete(id); // <-- REMOVE from map
       }
     });
 
@@ -199,13 +201,11 @@ export default class WorldScene extends Phaser.Scene {
       socketService.registerPeerId(socketService.socket.id);
       console.log("📝 Registered peer ID with server");
 
-      // Try to pre-warm mic permission
-      console.log("🎤 Requesting microphone access...");
-      console.log("⚠️ Browser may require user interaction");
-
-      await peerService.getUserMedia(false, true);
-      console.log("✅ Microphone access granted! ✅ PeerJS ready for proximity voice");
-
+      // --- CODE REMOVED ---
+      // We no longer ask for getUserMedia here.
+      // The React UI (VoiceChat.jsx) is now responsible for this
+      // when the user clicks the "enable media" button.
+      
       // Stream handlers
       peerService.onStreamReceived((peerId, stream) => {
         console.log("🔊 Received audio stream from:", peerId);
@@ -220,78 +220,22 @@ export default class WorldScene extends Phaser.Scene {
       console.error("❌ Failed to initialize PeerJS:", error);
       console.error("Error name:", error.name);
       console.error("Error message:", error.message);
-
-      if (error.name === "NotAllowedError") {
-        console.error("⚠️ Microphone permission denied by user");
-        this.showMicrophonePrompt();
-      } else if (error.name === "NotFoundError") {
-        console.error("⚠️ No microphone found");
-        alert("No microphone detected. Please connect a microphone to use voice chat");
-      } else {
-        console.error("⚠️ Unexpected error:", error);
-        this.showMicrophonePrompt();
-      }
+      // We no longer show a prompt here, React UI will handle it.
+      alert("Could not initialize voice/video service. Please refresh and try again.");
     }
-  }
-
-  showMicrophonePrompt() {
-    const overlay = document.createElement("div");
-    overlay.style.cssText = `
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.9); color: white; padding: 30px; border-radius: 10px;
-      z-index: 10000; text-align: center; font-family: Arial, sans-serif;
-    `;
-    overlay.innerHTML = `
-      <h2>🎤 Enable Voice Chat</h2>
-      <p>Click the button below to enable proximity voice chat.</p>
-      <p style="font-size: 12px; color: #aaa;">You'll be asked for microphone permission.</p>
-      <button id="enable-mic-btn" style="
-        padding: 15px 30px; font-size: 16px; background: #4CAF50; color: white;
-        border: none; border-radius: 5px; cursor: pointer; margin-top: 15px;
-      ">Enable Microphone</button>
-      <br>
-      <button id="skip-mic-btn" style="
-        padding: 10px 20px; font-size: 14px; background: transparent; color: #aaa;
-        border: 1px solid #aaa; border-radius: 5px; cursor: pointer; margin-top: 10px;
-      ">Skip (Play without voice)</button>
-    `;
-    document.body.appendChild(overlay);
-
-    document.getElementById("enable-mic-btn").onclick = async () => {
-      try {
-        await peerService.getUserMedia(false, true);
-        console.log("✅ Microphone enabled after user interaction");
-        overlay.remove();
-
-        peerService.onStreamReceived((peerId, stream) => {
-          this.handleRemoteStream(peerId, stream);
-        });
-        peerService.onCallEnded((peerId) => {
-          this.handleCallEnded(peerId);
-        });
-      } catch (err) {
-        console.error("Failed to get microphone:", err);
-        alert("Could not access microphone. Please check your browser settings.");
-      }
-    };
-
-    document.getElementById("skip-mic-btn").onclick = () => {
-      console.log("User chose to skip voice chat");
-      overlay.remove();
-    };
   }
 
   setupProximityCallHandlers() {
     console.log("🎯 Setting up proximity call handlers");
 
     socketService.onInitiateProximityCalls((data) => {
-      console.log("📞 Initiate calls with:", data.nearbyPlayers);
-      console.log("📊 Currently in calls with:", Array.from(this.currentNearbyPlayers));
-      console.log(
-        "🎤 Peer status:",
-        "peer=", !!peerService.peer,
-        "stream=", !!peerService.localStream
-      );
+      // console.log("📞 Initiate calls with:", data.nearbyPlayers);
+      // console.log("📊 Currently in calls with:", Array.from(this.currentNearbyPlayers));
+      // console.log(
+      //    "🎤 Peer status:",
+      //   "peer=", !!peerService.peer,
+      //   "stream=", !!peerService.localStream
+      // );
 
       const newNearbyIds = new Set(data.nearbyPlayers.map((p) => p.id));
 
@@ -317,18 +261,20 @@ export default class WorldScene extends Phaser.Scene {
             this.currentNearbyPlayers.add(p.id);
           }
         } else {
-          console.log("✅ Already in call with:", p.username);
+          // console.log("✅ Already in call with:", p.username); // Also commented out
         }
       });
     });
 
     socketService.onPlayerInProximity((data) => {
-      console.log("👥 In proximity of:", data.username, "Distance:", data.distance);
+      // console.log("👥 In proximity of:", data.username, "Distance:", data.distance); // Also commented out
     });
   }
 
   handleRemoteStream(peerId, stream) {
-    console.log("✅ Received audio stream from:", peerId, {
+    // This function handles the *audio* part of the stream for spatial sound.
+    // The *video* part is handled by the React VideoGrid component.
+    console.log("✅ Received remote stream from:", peerId, {
       id: stream.id,
       active: stream.active,
       audioTracks: stream.getAudioTracks().length,
@@ -638,6 +584,8 @@ export default class WorldScene extends Phaser.Scene {
     if (data.anim) otherPlayerSprite.anims.play(data.anim, true);
     else otherPlayerSprite.setFrame(18);
     this.players[id] = playerContainer;
+
+    this.playerUsernames.set(id, data.username); // <-- ADD to map
   }
 
   update() {

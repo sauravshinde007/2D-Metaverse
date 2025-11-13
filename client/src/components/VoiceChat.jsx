@@ -2,9 +2,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import peerService from '../services/peerService';
 import '../styles/voicechat.css';
+import { useAuth } from '../context/AuthContext';
 
-export default function VoiceChat() {
+// Accept props for video state
+export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
+  const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false);
+  // We no longer manage video state here; it's passed in as a prop.
   const [activeCalls, setActiveCalls] = useState([]);
   const [micPermission, setMicPermission] = useState('pending');
   const [micEnabled, setMicEnabled] = useState(false);
@@ -24,12 +28,16 @@ export default function VoiceChat() {
         console.log('Permission API not supported');
       }
     };
-
     checkPermission();
 
-    // Check if microphone is already enabled
+    // Check if media is already enabled
     if (peerService.localStream) {
       setMicEnabled(true);
+      // Sync prop state with stream state on initial load
+      const videoTrack = peerService.localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        setIsVideoEnabled(videoTrack.enabled);
+      }
     }
 
     // Update active calls and transmission status periodically
@@ -44,12 +52,12 @@ export default function VoiceChat() {
       if (peerService.localStream && !micEnabled) {
         setMicEnabled(true);
       }
-    }, 500); // Check more frequently for better responsiveness
+    }, 500);
 
     return () => {
       clearInterval(interval);
     };
-  }, [isMuted, micEnabled]);
+  }, [isMuted, micEnabled, setIsVideoEnabled]);
 
   const toggleMute = () => {
     const newMutedState = !isMuted;
@@ -57,32 +65,36 @@ export default function VoiceChat() {
     setIsMuted(newMutedState);
   };
 
-  const enableMicrophone = async () => {
+  const toggleVideo = () => {
+    const newVideoState = !isVideoEnabled;
+    peerService.setVideoEnabled(newVideoState);
+    // Call the setter prop from Metaverse.jsx
+    setIsVideoEnabled(newVideoState);
+  };
+
+  const enableMedia = async () => {
     try {
-      console.log('🎤 Enabling microphone...');
-      await peerService.getUserMedia(false, true);
-      setMicEnabled(true);
-      console.log('✅ Microphone enabled via UI');
-      console.log('📊 Microphone Details:');
+      console.log('🎤 Enabling media (audio & video)...');
+      
+      // Request both audio and video
+      await peerService.getUserMedia({ 
+        audio: true, 
+        video: { width: 320, height: 240 } // Request low-res video
+      });
+      
+      setMicEnabled(true); // This state now means "media is enabled"
+      setIsVideoEnabled(false); // Video is disabled by default
+      console.log('✅ Media enabled via UI');
+      console.log('📊 Media Details:');
       console.log('  - Has local stream:', !!peerService.localStream);
-      console.log('  - Has peer:', !!peerService.peer);
-      console.log('  - Peer ID:', peerService.peer?.id);
-      if (peerService.localStream) {
-        const audioTracks = peerService.localStream.getAudioTracks();
-        console.log('  - Audio tracks:', audioTracks.length);
-        if (audioTracks.length > 0) {
-          console.log('  - Track label:', audioTracks[0].label);
-          console.log('  - Track enabled:', audioTracks[0].enabled);
-        }
-      }
     } catch (error) {
-      console.error('Failed to enable microphone:', error);
+      console.error('Failed to enable media:', error);
       if (error.name === 'NotAllowedError') {
-        alert('Microphone permission denied. Please allow access in your browser settings.');
+        alert('Media permissions denied. Please allow access in your browser settings.');
       } else if (error.name === 'NotFoundError') {
-        alert('No microphone found. Please connect a microphone.');
+        alert('No microphone or camera found.');
       } else {
-        alert('Failed to access microphone: ' + error.message);
+        alert('Failed to access media: ' + error.message);
       }
     }
   };
@@ -90,13 +102,13 @@ export default function VoiceChat() {
   const testConnection = () => {
     console.log('🧪 === CONNECTION TEST ===');
     console.log('Microphone enabled:', micEnabled);
+    console.log('Video enabled:', isVideoEnabled);
     console.log('PeerService.peer:', peerService.peer);
     console.log('PeerService.localStream:', peerService.localStream);
     console.log('Active calls:', peerService.getActiveCalls());
+    console.log('Remote streams:', peerService.getRemoteStreams().length);
     console.log('Is muted:', isMuted);
     console.log('Is transmitting:', isTransmitting);
-    
-    // Check if game scene is accessible
     if (window.game?.scene?.scenes[0]) {
       const scene = window.game.scene.scenes[0];
       console.log('Current nearby players:', Array.from(scene.currentNearbyPlayers || []));
@@ -107,89 +119,55 @@ export default function VoiceChat() {
 
   return (
     <div className="voice-chat-container">
-      <div className="voice-chat-header">
-        <span className="voice-chat-title">🎙️ Proximity Voice</span>
-        {activeCalls.length > 0 && (
-          <span className="active-calls-badge">{activeCalls.length}</span>
-        )}
-      </div>
       
-      <div className="voice-chat-controls">
-        {!micEnabled ? (
-          <button 
-            className="mic-button enable"
-            onClick={enableMicrophone}
-            title="Click to enable microphone"
-          >
-            🎤
-            <div style={{ fontSize: '10px', marginTop: '5px' }}>Click to Enable</div>
-          </button>
-        ) : (
-          <>
-            <button 
-              className={`mic-button ${isMuted ? 'muted' : 'active'}`}
-              onClick={toggleMute}
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? '🔇' : '🎤'}
-            </button>
-            
-            {/* Transmission Status Indicator */}
-            <div className="transmission-status">
-              {isTransmitting ? (
-                <div className="status-transmitting">
-                  <div className="pulse-dot"></div>
-                  <span>📡 Transmitting to {activeCalls.length} player{activeCalls.length !== 1 ? 's' : ''}</span>
-                </div>
-              ) : activeCalls.length > 0 ? (
-                <div className="status-muted">
-                  <span>🔇 Muted ({activeCalls.length} nearby)</span>
-                </div>
-              ) : (
-                <div className="status-ready">
-                  <span>
-                    {peerService.localStream 
-                      ? '✓ Ready (no players nearby)' 
-                      : '⚠️ Mic not enabled'}
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            {/* Debug Info */}
-            <div style={{ fontSize: '10px', marginTop: '5px', color: '#888', textAlign: 'center' }}>
-              Active calls: {activeCalls.length} | 
-              Stream: {peerService.localStream ? '✓' : '✗'} | 
-              Peer: {peerService.peer ? '✓' : '✗'}
-            </div>
-            
-            {/* Test Button */}
-            <button 
-              onClick={testConnection}
-              style={{
-                marginTop: '8px',
-                padding: '5px 10px',
-                fontSize: '11px',
-                background: '#2196F3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                width: '100%'
-              }}
-            >
-              🧪 Test Connection (Check Console)
-            </button>
-          </>
-        )}
-        
-        {micPermission === 'denied' && (
-          <div className="permission-warning">
-            ⚠️ Microphone access denied
-          </div>
-        )}
+      {/* Avatar */}
+      <div className="avatar-display">
+        {user?.username?.[0]?.toUpperCase() || '?'}
+        {micEnabled && <div className="online-indicator"></div>}
       </div>
 
+      {/* Microphone Button */}
+      <button
+        className={`mic-button ${micEnabled && !isMuted ? 'active' : 'muted'}`}
+        onClick={micEnabled ? toggleMute : enableMedia} // Calls enableMedia
+        title={micEnabled ? (isMuted ? 'Unmute' : 'Mute') : 'Enable Media'}
+      >
+        <img 
+          src={micEnabled && !isMuted ? '/icons/mic-active.png' : '/icons/mic-muted.png'} 
+          alt={micEnabled && !isMuted ? 'Microphone Active' : 'Microphone Muted'} 
+          className="mic-icon"
+        />
+      </button>
+
+      {/* Camera Button (uses props) */}
+      <button 
+        className={`mic-button ${isVideoEnabled ? 'active' : 'muted'}`}
+        onClick={toggleVideo}
+        title={isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
+        disabled={!micEnabled} // Can't turn on video if media isn't enabled
+      >
+        <img 
+          src={isVideoEnabled ? '/icons/camera-on.png' : '/icons/camera-off.png'} 
+          alt={isVideoEnabled ? 'Camera On' : 'Camera Off'} 
+          className="mic-icon"
+        />
+      </button>
+
+      {/* Test Button */}
+      <button 
+        onClick={testConnection}
+        className="mic-button debug-button"
+        title="Test Connection (Check Console)"
+      >
+        🧪
+      </button>
+
+      {/* Permission Warning */}
+      {micPermission === 'denied' && (
+        <div className="permission-warning">
+          ⚠️ Mic Denied
+        </div>
+      )}
     </div>
   );
 }
