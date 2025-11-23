@@ -1,0 +1,19 @@
+/* client/src/styles/mic-overlay.css */
+.mic-overlay {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.9); color: white; padding: 30px; border-radius: 10px;
+  z-index: 10000; text-align: center; font-family: Arial, sans-serif;
+  width: min(92vw, 420px);
+}
+.mic-overlay h2 { margin: 0 0 8px; }
+.mic-overlay p { margin: 6px 0; }
+.mic-overlay .muted { font-size: 12px; color: #aaa; }
+.mic-btn {
+  display: inline-block; border: none; border-radius: 8px; cursor: pointer;
+  margin-top: 14px; padding: 12px 22px; font-size: 15px;
+}
+.mic-btn.primary { background: #4CAF50; color: #fff; }
+.mic-btn.secondary {
+  background: transparent; color: #aaa; border: 1px solid #aaa; padding: 10px 18px;
+  font-size: 14px;
+}

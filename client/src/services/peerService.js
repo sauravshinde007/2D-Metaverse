@@ -6,6 +6,7 @@ class PeerService {
     this.peer = null;
     this.localStream = null;
     this.activeCalls = new Map(); // Map of peerId -> call object
+    this.remoteStreams = new Map(); // <-- NEW: Map of peerId -> remote stream
     this.onCallReceivedCallback = null;
     this.onStreamReceivedCallback = null;
     this.onCallEndedCallback = null;
@@ -84,26 +85,20 @@ class PeerService {
 
   /**
    * Get user's media stream (audio/video)
-   * @param {boolean} video - Enable video
-   * @param {boolean} audio - Enable audio
+   * @param {Object} constraints - MediaStream constraints object (e.g., { audio: true, video: { ... } })
    */
-  async getUserMedia(video = false, audio = true) {
+  // <-- CHANGED: Signature now accepts a constraints object
+  async getUserMedia(constraints) { 
     try {
-      console.log('Requesting media with constraints:', { video, audio });
+      console.log('Requesting media with constraints:', constraints);
       
       // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('getUserMedia is not supported in this browser');
       }
 
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: video,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      // <-- CHANGED: Use the constraints object directly
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
       
       console.log('✅ Local media stream obtained');
       console.log('Audio tracks:', this.localStream.getAudioTracks().length);
@@ -116,6 +111,9 @@ class PeerService {
         console.log('Audio track enabled:', audioTracks[0].enabled);
         console.log('Audio track ready state:', audioTracks[0].readyState);
       }
+
+      // <-- NEW: Disable video by default so user can enable it manually
+      this.setVideoEnabled(false);
       
       return this.localStream;
     } catch (error) {
@@ -148,6 +146,7 @@ class PeerService {
     call.on('stream', (remoteStream) => {
       console.log('✅ Received stream from:', remotePeerId);
       this.activeCalls.set(remotePeerId, call);
+      this.remoteStreams.set(remotePeerId, remoteStream); // <-- NEW
       
       if (this.onStreamReceivedCallback) {
         this.onStreamReceivedCallback(remotePeerId, remoteStream);
@@ -157,6 +156,7 @@ class PeerService {
     call.on('close', () => {
       console.log('📴 Call closed with:', remotePeerId);
       this.activeCalls.delete(remotePeerId);
+      this.remoteStreams.delete(remotePeerId); // <-- NEW
       
       if (this.onCallEndedCallback) {
         this.onCallEndedCallback(remotePeerId);
@@ -166,6 +166,7 @@ class PeerService {
     call.on('error', (error) => {
       console.error('Call error with', remotePeerId, ':', error);
       this.activeCalls.delete(remotePeerId);
+      this.remoteStreams.delete(remotePeerId); // <-- NEW
     });
   }
 
@@ -191,6 +192,7 @@ class PeerService {
     call.on('stream', (remoteStream) => {
       console.log('✅ Received stream from:', call.peer);
       this.activeCalls.set(call.peer, call);
+      this.remoteStreams.set(call.peer, remoteStream); // <-- NEW
       
       if (this.onStreamReceivedCallback) {
         this.onStreamReceivedCallback(call.peer, remoteStream);
@@ -200,6 +202,7 @@ class PeerService {
     call.on('close', () => {
       console.log('📴 Call closed with:', call.peer);
       this.activeCalls.delete(call.peer);
+      this.remoteStreams.delete(call.peer); // <-- NEW
       
       if (this.onCallEndedCallback) {
         this.onCallEndedCallback(call.peer);
@@ -209,6 +212,7 @@ class PeerService {
     call.on('error', (error) => {
       console.error('Call error with', call.peer, ':', error);
       this.activeCalls.delete(call.peer);
+      this.remoteStreams.delete(call.peer); // <-- NEW
     });
   }
 
@@ -221,6 +225,7 @@ class PeerService {
     if (call) {
       call.close();
       this.activeCalls.delete(peerId);
+      this.remoteStreams.delete(peerId); // <-- NEW
       console.log('Ended call with:', peerId);
     }
   }
@@ -234,6 +239,7 @@ class PeerService {
       console.log('Ended call with:', peerId);
     });
     this.activeCalls.clear();
+    this.remoteStreams.clear(); // <-- NEW
   }
 
   /**
@@ -244,6 +250,19 @@ class PeerService {
     if (this.localStream) {
       this.localStream.getAudioTracks().forEach(track => {
         track.enabled = !muted;
+      });
+    }
+  }
+
+  // <-- NEW: Function to enable/disable video
+  /**
+   * Enable/disable local video
+   * @param {boolean} enabled 
+   */
+  setVideoEnabled(enabled) {
+    if (this.localStream) {
+      this.localStream.getVideoTracks().forEach(track => {
+        track.enabled = enabled;
       });
     }
   }
@@ -269,6 +288,14 @@ class PeerService {
    */
   getActiveCalls() {
     return Array.from(this.activeCalls.keys());
+  }
+
+  // <-- NEW: Function for React to get all remote streams
+  /**
+   * Get list of [peerId, remoteStream] pairs
+   */
+  getRemoteStreams() {
+    return Array.from(this.remoteStreams.entries());
   }
 
   /**

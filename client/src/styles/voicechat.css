@@ -1,163 +1,159 @@
 /* client/src/styles/voicechat.css */
+/* Same layout as old version — new Metaverse finish */
+
+/* Voice bar at bottom center */
 .voice-chat-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.8);
-  border: 2px solid #4CAF50;
-  border-radius: 12px;
-  padding: 15px;
-  color: white;
-  font-family: Arial, sans-serif;
-  z-index: 1000;
-  min-width: 200px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-.voice-chat-header {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.voice-chat-title {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.active-calls-badge {
-  background: #4CAF50;
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.voice-chat-controls {
-  display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
+  
+  padding: 6px 10px;
+  border-radius: 50px;
+
+  /* 🔥 Updated visual style */
+  background: radial-gradient(circle at top, #181827 0, #050509 50%, #000 100%);
+  border: 1px solid rgba(63, 63, 92, 0.85);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
+  
+  z-index: 1000;
+  color: #e6e7ea;
 }
 
+/* Avatar circle */
+.avatar-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+
+  /* 🔥 Gradient avatar like UI theme */
+  background: linear-gradient(135deg, #9b99fe, #2bc8b7);
+  color: #050509;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: system-ui;
+  position: relative;
+  flex-shrink: 0;
+
+  box-shadow: 0 8px 24px rgba(11, 226, 180, 0.45);
+}
+
+/* Online indicator */
+.avatar-display .online-indicator {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #050509;
+}
+
+/* Icon buttons */
 .mic-button {
-  width: 60px;
-  height: 60px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: none;
-  font-size: 30px;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  background: rgba(18, 18, 30, 0.95);
+  transition:
+    background-color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.18s ease,
+    filter 0.16s ease;
+
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.65);
 }
 
+/* Hover */
+.mic-button:not(:disabled):hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+/* Press */
+.mic-button:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* Icons */
+.mic-button .mic-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+/* 🔥 Active states */
 .mic-button.active {
-  background: #4CAF50;
+  background-image: linear-gradient(135deg, #9b99fe, #2bc8b7);
+  box-shadow: 0 10px 26px rgba(11, 226, 180, 0.55);
+}
+.mic-button.active .mic-icon {
+  filter: invert(0%);
 }
 
-.mic-button.active:hover {
-  background: #45a049;
-  transform: scale(1.05);
-}
-
+/* Muted state */
 .mic-button.muted {
-  background: #f44336;
+  background: rgba(37, 37, 55, 0.95);
+}
+.mic-button.muted .mic-icon {
+  filter: invert(100%);
 }
 
-.mic-button.muted:hover {
-  background: #da190b;
-  transform: scale(1.05);
+/* Disabled */
+.mic-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-.mic-button.enable {
-  background: #2196F3;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  display: flex;
-  font-size: 24px;
-  width: 80px;
-  height: 80px;
+/* Debug button (🧪) */
+.debug-button {
+  font-size: 18px;
+  color: #e6e7ea;
+  background: rgba(20, 20, 35, 0.95);
 }
 
-.mic-button.enable:hover {
-  background: #0b7dda;
-  transform: scale(1.05);
-}
-
-.transmission-status {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  text-align: center;
-}
-
-.status-transmitting {
-  background: rgba(76, 175, 80, 0.2);
-  border: 1px solid #4CAF50;
-  color: #4CAF50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4CAF50;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.3);
-  }
-}
-
-.status-muted {
-  background: rgba(244, 67, 54, 0.2);
-  border: 1px solid #f44336;
-  color: #f44336;
-}
-
-.status-ready {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #aaa;
-}
-
+/* Permission warning */
 .permission-warning {
-  background: #ff9800;
-  color: white;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 5px;
+  background: rgba(234, 179, 8, 0.95);
+  border: 1px solid rgba(255, 221, 100, 0.65);
+  padding: 5px 10px;
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  color: #050509;
+  box-shadow: 0 8px 18px rgba(255, 215, 77, 0.4);
 }
 
-.active-calls-info {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-  text-align: center;
-  color: #4CAF50;
-}
-
-.active-calls-info small {
-  font-size: 12px;
+/* Hide unused legacy elements */
+.voice-chat-header,
+.transmission-status,
+.active-calls-badge {
+  display: none;
 }

@@ -11,7 +11,10 @@
   },
   "dependencies": {
     "@stream-io/video-react-sdk": "^1.20.1",
+    "@tailwindcss/vite": "^4.1.17",
     "axios": "^1.13.1",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.554.0",
     "peerjs": "^1.5.5",
     "phaser": "^3.90.0",
     "phaser-raycaster": "^0.10.11",
@@ -20,7 +23,8 @@
     "react-router-dom": "^7.9.5",
     "socket.io-client": "^4.8.1",
     "stream-chat": "^9.18.1",
-    "stream-chat-react": "^13.6.0"
+    "stream-chat-react": "^13.6.0",
+    "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

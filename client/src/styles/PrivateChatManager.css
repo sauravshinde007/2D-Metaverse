@@ -103,35 +103,29 @@
 
 /* --- NEW: Stream Theme Overrides (CSS Variables) --- */
 /* This one block replaces all the broken .str-chat__... rules */
-.private-chat-panel .str-chat__theme-dark {
-  /* Main background colors */
-  --str-chat__bg-color: #272757;
-  --str-chat__channel-list-bg-color: #0f0e47;
+.str-chat__theme-dark .private-chat-panel {
+  --str-chat__bg-color: #14141a;
+  --str-chat__channel-list-bg-color: #0d0d14;
 
-  /* Channel preview (sidebar list) */
   --str-chat__channel-preview-bg-color: transparent;
-  --str-chat__channel-preview-bg-color-hover: #505081;
-  --str-chat__channel-preview-bg-color-active: #272757;
-  --str-chat__channel-preview-border: 1px solid #505081;
+  --str-chat__channel-preview-bg-color-hover: #272739;
+  --str-chat__channel-preview-bg-color-active: #181827;
+  --str-chat__channel-preview-border: 1px solid #272739;
 
-  /* Text colors */
-  --str-chat__text-color: #e0e0e0;
-  --str-chat__text-input-color: #ffffff; /* This fixes the bug */
+  --str-chat__text-color: #e6e7ea;
+  --str-chat__text-input-color: #ffffff;
   --str-chat__text-input-placeholder-color: #8686ac;
 
-  /* Message input */
-  --str-chat__input-bg: #0f0e47;
-  --str-chat__input-bg-color: #0f0e47;
-  --str-chat__input-wrapper-border: 1px solid #505081;
-  --str-chat__input-wrapper-border-focus: 1px solid #8686ac;
-  --str-chat__input-flat-wrapper-bg-color: #0f0e47;
+  --str-chat__input-bg: #050509;
+  --str-chat__input-bg-color: #050509;
+  --str-chat__input-wrapper-border: 1px solid #272739;
+  --str-chat__input-wrapper-border-focus: 1px solid #9b99fe;
+  --str-chat__input-flat-wrapper-bg-color: #050509;
 
-  /* Message hover */
-  --str-chat__message-bg-color-hover: rgba(15, 14, 71, 0.5);
+  --str-chat__message-bg-color-hover: rgba(255, 255, 255, 0.03);
 
-  /* Other colors */
   --str-chat__avatar-bg-color: #505081;
-  --str-chat__primary-color: #e0e0e0;
+  --str-chat__primary-color: #9b99fe;
 }
 
 

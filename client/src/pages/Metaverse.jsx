@@ -1,15 +1,19 @@
 // client/src/pages/Metaverse.jsx
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react"; // <-- Import useState
 import "../styles/App.css";
 import startGame from "../phaser";
 import Sidebar from "../components/Sidebar";
 import VoiceChat from "../components/VoiceChat";
+import VideoGrid from "../components/VideoGrid";
+import LocalVideoView from "../components/LocalVideoView"; // <-- 1. Import LocalVideoView
 import { ChatProvider } from "../context/ChatContext";
 import { useAuth } from "../context/AuthContext";
 
 function Metaverse() {
-    const { user } = useAuth(); // We still need logout for the button
+    const { user } = useAuth(); 
+    // 2. "Lift state up" - Manage video state here
+    const [isVideoEnabled, setIsVideoEnabled] = useState(false);
 
     useEffect(() => {
         if (user && user.username) {
@@ -28,9 +32,18 @@ function Metaverse() {
         <ChatProvider>
             <div className="app-root">
                 <div id="game-container" className="game-container" />
-                <Sidebar />
-                <VoiceChat />
+                {/* 3. Add LocalVideoView, controlled by the state */}
+                <LocalVideoView isVisible={isVideoEnabled} />
                 
+                <VideoGrid />
+                
+                {/* 4. Pass the state and setter down to the controls */}
+                <VoiceChat 
+                  isVideoEnabled={isVideoEnabled}
+                  setIsVideoEnabled={setIsVideoEnabled}
+                />
+
+                <Sidebar />
             </div>
         </ChatProvider>
     );
