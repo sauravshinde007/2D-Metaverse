@@ -1,134 +1,157 @@
 /* client/src/styles/voicechat.css */
+/* Same layout as old version — new Metaverse finish */
 
-/* Main container, now a horizontal bar at the bottom */
+/* Voice bar at bottom center */
 .voice-chat-container {
   position: fixed;
-  bottom: 20px; /* Position at the bottom */
-  left: 50%; /* Center horizontally */
-  transform: translateX(-50%); /* Offset for centering */
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   
   display: flex;
-  flex-direction: row; /* Arrange items horizontally */
+  flex-direction: row;
   align-items: center;
-  gap: 10px; /* CHANGED: Was 12px */
+  gap: 10px;
   
-  background: rgba(20, 20, 20, 0.9); /* Dark background like the image */
-  border-radius: 50px; /* Pill shape */
-  padding: 6px 8px; /* CHANGED: Was 8px 10px */
+  padding: 6px 10px;
+  border-radius: 50px;
+
+  /* 🔥 Updated visual style */
+  background: radial-gradient(circle at top, #181827 0, #050509 50%, #000 100%);
+  border: 1px solid rgba(63, 63, 92, 0.85);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
   
   z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
-  backdrop-filter: blur(5px);
+  color: #e6e7ea;
 }
 
-/* Avatar display ('S') */
+/* Avatar circle */
 .avatar-display {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; /* CHANGED: Was 44px */
-  height: 36px; /* CHANGED: Was 44px */
+
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #F9A825; /* Yellowish color from image */
-  color: black;
-  font-weight: bold;
-  font-size: 18px; /* CHANGED: Was 20px */
-  font-family: Arial, sans-serif;
+
+  /* 🔥 Gradient avatar like UI theme */
+  background: linear-gradient(135deg, #9b99fe, #2bc8b7);
+  color: #050509;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: system-ui;
   position: relative;
   flex-shrink: 0;
+
+  box-shadow: 0 8px 24px rgba(11, 226, 180, 0.45);
 }
 
-/* This is the green "online" dot */
+/* Online indicator */
 .avatar-display .online-indicator {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px; /* CHANGED: Was 12px */
-  height: 10px; /* CHANGED: Was 12px */
-  background: #4CAF50; /* Green dot */
+  bottom: -1px;
+  right: -1px;
+
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(20, 20, 20, 0.9); /* Border matches container bg */
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #050509;
 }
 
-/* General icon button style */
+/* Icon buttons */
 .mic-button {
-  width: 36px; /* CHANGED: Was 44px */
-  height: 36px; /* CHANGED: Was 44px */
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: #333; /* Default dark grey for buttons */
-  color: white; /* Fallback for text if no img */
+  padding: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  padding: 0; /* Remove padding to let image fill */
-  font-size: 18px; /* CHANGED: For emoji (like test button) */
+  cursor: pointer;
+
+  background: rgba(18, 18, 30, 0.95);
+  transition:
+    background-color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.18s ease,
+    filter 0.16s ease;
+
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.65);
 }
 
-.mic-button:hover {
-  background: #444;
+/* Hover */
+.mic-button:not(:disabled):hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
 }
 
-/* Style for the image inside the button */
+/* Press */
+.mic-button:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* Icons */
 .mic-button .mic-icon {
-    width: 20px; /* CHANGED: Was 24px */
-    height: 20px; /* CHANGED: Was 24px */
-    object-fit: contain;
-    filter: invert(100%); /* Makes most black SVG icons white */
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
-
-/* Specific style for the 'active' (unmuted) microphone button */
+/* 🔥 Active states */
 .mic-button.active {
-  background: #4CAF50; /* Green background for active mic */
-}
-.mic-button.active:hover {
-  background: #45a049; /* Slightly darker green on hover */
+  background-image: linear-gradient(135deg, #9b99fe, #2bc8b7);
+  box-shadow: 0 10px 26px rgba(11, 226, 180, 0.55);
 }
 .mic-button.active .mic-icon {
-    filter: invert(0%); /* Assuming green background, so a black icon looks good */
+  filter: invert(0%);
 }
 
-/* No special background for muted/disabled, it uses the default .mic-button background */
+/* Muted state */
 .mic-button.muted {
-    background: #333; /* Dark grey background */
-}
-.mic-button.muted:hover {
-    background: #444;
+  background: rgba(37, 37, 55, 0.95);
 }
 .mic-button.muted .mic-icon {
-    filter: invert(100%); /* Makes the icon white */
+  filter: invert(100%);
 }
 
+/* Disabled */
+.mic-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
-/* Special style for the debug button */
+/* Debug button (🧪) */
 .debug-button {
-  background: #2196F3; /* Blue for debug */
-}
-.debug-button:hover {
-  background: #0b7dda;
-}
-.debug-button .mic-icon { /* Ensure debug button icon is white */
-    filter: invert(100%); 
+  font-size: 18px;
+  color: #e6e7ea;
+  background: rgba(20, 20, 35, 0.95);
 }
 
-/* Permission warning - styled to fit the bar */
+/* Permission warning */
 .permission-warning {
-  background: #ff9800;
-  color: black;
-  padding: 6px 10px; /* CHANGED: Was 8px 12px */
+  background: rgba(234, 179, 8, 0.95);
+  border: 1px solid rgba(255, 221, 100, 0.65);
+  padding: 5px 10px;
   border-radius: 20px;
-  font-size: 11px; /* CHANGED: Was 12px */
-  font-weight: bold;
-  text-align: center;
+
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
+
+  color: #050509;
+  box-shadow: 0 8px 18px rgba(255, 215, 77, 0.4);
 }
 
-/* Hide old elements that are no longer used in this UI */
+/* Hide unused legacy elements */
 .voice-chat-header,
 .transmission-status,
 .active-calls-badge {
