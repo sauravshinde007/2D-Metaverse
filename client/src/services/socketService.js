@@ -1,5 +1,4 @@
 // src/services/socketService.js
-
 import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL;
@@ -9,7 +8,7 @@ const socketService = {
   connect() {
     if (socket && socket.connected) return;
 
-    console.log("🔌 Connecting to socket server...");
+    console.log("🔌 Connecting to socket server.");
     socket = io(SOCKET_URL);
 
     socket.on("connect", () =>
@@ -20,10 +19,17 @@ const socketService = {
     );
   },
 
-  // ✅ Generic event listener (important for forceDisconnect, etc.)
+  // Generic event listener
   on(eventName, callback) {
     if (socket) {
       socket.on(eventName, callback);
+    }
+  },
+
+  //NEW: remove listener
+  off(eventName, callback) {
+    if (socket) {
+      socket.off(eventName, callback);
     }
   },
 
@@ -51,6 +57,10 @@ const socketService = {
     socket?.emit("registerPeerId", peerId);
   },
 
+  emitVideoStatus(enabled) {
+    socket?.emit("videoStatus", enabled);
+  },
+
   // ====== LISTEN EVENTS ======
   onPlayers(callback) {
     socket?.on("players", callback);
@@ -76,7 +86,10 @@ const socketService = {
     socket?.on("playerInProximity", callback);
   },
 
-  // ====== CLEANUP ======
+  onPlayerVideoStatus(callback) {
+    socket?.on("playerVideoStatus", callback);
+  },
+
   removeAllListeners() {
     socket?.removeAllListeners();
   }

@@ -12,76 +12,84 @@ class PeerService {
     this.onCallEndedCallback = null;
   }
 
-  /**
-   * Initialize PeerJS connection
-   * @param {string} userId - Unique user ID (socket ID)
-   */
+ 
   async initialize(userId) {
-    // Don't re-initialize if already connected
-    if (this.peer && !this.peer.destroyed) {
-      console.log('⚠️ PeerJS already initialized');
-      return this.peer.id;
-    }
-
-    return new Promise((resolve, reject) => {
-      try {
-        // Connect to PeerJS server running on your backend
-        this.peer = new Peer(userId, {
-          host: 'localhost', // Change this to your server host in production
-          port: 3001,
-          path: '/peerjs', // Path matches the Express mount point
-          secure: false,
-          debug: 2,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-            ]
-          }
-        });
-
-        this.peer.on('open', (id) => {
-          console.log('✅ PeerJS connected with ID:', id);
-          resolve(id);
-        });
-
-        this.peer.on('error', (error) => {
-          console.error('❌ PeerJS error:', error);
-          console.error('Error type:', error.type);
-          
-          // Handle specific error types
-          if (error.type === 'network' || error.type === 'server-error') {
-            console.error('⚠️ Cannot connect to PeerJS server. Make sure server is running on port 3001');
-          } else if (error.type === 'peer-unavailable') {
-            console.error('⚠️ Remote peer is not available');
-          }
-          
-          // Don't reject immediately on network errors, try to reconnect
-          if (error.type !== 'network') {
-            reject(error);
-          }
-        });
-
-        // Listen for incoming calls
-        this.peer.on('call', (call) => {
-          console.log('📞 Incoming call from:', call.peer);
-          this.handleIncomingCall(call);
-        });
-
-        this.peer.on('disconnected', () => {
-          console.log('⚠️ PeerJS disconnected. Attempting to reconnect...');
-          this.peer.reconnect();
-        });
-
-        this.peer.on('close', () => {
-          console.log('❌ PeerJS connection closed');
-        });
-
-      } catch (error) {
-        console.error('Failed to initialize PeerJS:', error);
-        reject(error);
-      }
-    });
+  // Don't re-initialize if already connected
+  if (this.peer && !this.peer.destroyed) {
+    console.log('⚠️ PeerJS already initialized');
+    return this.peer.id;
   }
+
+  // 🔧 Derive host/port/secure from your SOCKET_SERVER_URL
+  const socketUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
+  const url = new URL(socketUrl);
+
+  const host = url.hostname;                 // e.g. w1npgpv2-3001.inc1.devtunnels.ms or localhost
+  const secure = url.protocol === 'https:';  // true for https devtunnel, false for http://localhost
+  const port = url.port
+    ? Number(url.port)
+    : secure
+      ? 443
+      : 80;                                  // sensible defaults when no port is specified
+
+  console.log('🌐 PeerJS config:', { host, port, secure });
+
+  return new Promise((resolve, reject) => {
+    try {
+      this.peer = new Peer(userId, {
+        host,
+        port,
+        path: '/peerjs',  // must match server mount
+        secure,
+        debug: 2,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+          ]
+        }
+      });
+
+      this.peer.on('open', (id) => {
+        console.log('✅ PeerJS connected with ID:', id);
+        resolve(id);
+      });
+
+      this.peer.on('error', (error) => {
+        console.error('❌ PeerJS error:', error);
+        console.error('Error type:', error.type);
+
+        if (error.type === 'network' || error.type === 'server-error') {
+          console.error('⚠️ Cannot connect to PeerJS server. Check host/port and devtunnel.');
+        } else if (error.type === 'peer-unavailable') {
+          console.error('⚠️ Remote peer is not available');
+        }
+
+        if (error.type !== 'network') {
+          reject(error);
+        }
+      });
+
+      this.peer.on('call', (call) => {
+        console.log('📞 Incoming call from:', call.peer);
+        this.handleIncomingCall(call);
+      });
+
+      this.peer.on('disconnected', () => {
+        console.log('⚠️ PeerJS disconnected. Attempting to reconnect...');
+        this.peer.reconnect();
+      });
+
+      this.peer.on('close', () => {
+        console.log('❌ PeerJS connection closed');
+      });
+
+    } catch (error) {
+      console.error('Failed to initialize PeerJS:', error);
+      reject(error);
+    }
+  });
+}
+
 
   /**
    * Get user's media stream (audio/video)

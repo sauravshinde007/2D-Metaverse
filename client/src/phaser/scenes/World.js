@@ -12,12 +12,22 @@ export default class WorldScene extends Phaser.Scene {
     this.audioElements = {}; // peerId -> HTMLAudioElement
     this.currentNearbyPlayers = new Set(); // track active proximity calls
     this.playerUsernames = new Map();
+
+    // 🔵 Mobile joystick state
+    this.joystickBase = null;
+    this.joystickThumb = null;
+    this.joystickActive = false;
+    this.joystickDirection = { up: false, down: false, left: false, right: false };
+
+    // Disconnect grace period timers
+    this.disconnectTimers = new Map();
   }
 
   init(data) {
     this.username = data.username;
   }
 
+  // Load assets
   preload() {
     this.load.tilemapTiledJSON("office-map", "/assets/map/test.tmj");
     this.load.image("room-tiles", "/assets/tilesets/Room_Builder_free_32x32.png");
@@ -115,11 +125,20 @@ export default class WorldScene extends Phaser.Scene {
     this.currentAnimation = "idle-down";
 
     this.cameras.main.startFollow(this.player);
-    this.cameras.main.setZoom(1.5); // from other branch
+    // 🔍 Responsive zoom
+    if (this.isMobileDevice && this.isMobileDevice()) {
+      // On mobile: zoom out a bit so you see more of the world
+      this.cameras.main.setZoom(1.0);
+    } else {
+      // Desktop / larger screens
+      this.cameras.main.setZoom(1.5);
+    }
 
     // Input
     this.inputManager = new InputManager(this);
     this.setupInputHandlers();
+
+    this.createMobileJoystick(); // 🔵 Create mobile joysticsk
 
     // Socket event wiring
     socketService.onPlayers((players) => {
@@ -201,11 +220,6 @@ export default class WorldScene extends Phaser.Scene {
       socketService.registerPeerId(socketService.socket.id);
       console.log("📝 Registered peer ID with server");
 
-      // --- CODE REMOVED ---
-      // We no longer ask for getUserMedia here.
-      // The React UI (VoiceChat.jsx) is now responsible for this
-      // when the user clicks the "enable media" button.
-      
       // Stream handlers
       peerService.onStreamReceived((peerId, stream) => {
         console.log("🔊 Received audio stream from:", peerId);
@@ -229,45 +243,57 @@ export default class WorldScene extends Phaser.Scene {
     console.log("🎯 Setting up proximity call handlers");
 
     socketService.onInitiateProximityCalls((data) => {
-      // console.log("📞 Initiate calls with:", data.nearbyPlayers);
-      // console.log("📊 Currently in calls with:", Array.from(this.currentNearbyPlayers));
-      // console.log(
-      //    "🎤 Peer status:",
-      //   "peer=", !!peerService.peer,
-      //   "stream=", !!peerService.localStream
-      // );
-
       const newNearbyIds = new Set(data.nearbyPlayers.map((p) => p.id));
 
-      // End calls that are no longer nearby
+      // End calls that are no longer nearby (with Grace Period)
       this.currentNearbyPlayers.forEach((pid) => {
         if (!newNearbyIds.has(pid)) {
-          console.log("👋 Player moved away, ending call:", pid);
-          peerService.endCall(pid);
-          this.currentNearbyPlayers.delete(pid);
+          // If already scheduled to disconnect, do nothing (wait)
+          if (this.disconnectTimers.has(pid)) return;
+
+          console.log(`⏳ Player ${pid} moved away, scheduling disconnect in 2s...`);
+
+          const timerId = setTimeout(() => {
+            console.log("👋 Grace period over, ending call:", pid);
+            peerService.endCall(pid);
+            this.currentNearbyPlayers.delete(pid);
+            this.disconnectTimers.delete(pid);
+          }, 2000); // 2 second grace period
+
+          this.disconnectTimers.set(pid, timerId);
         }
       });
 
       // Start calls for newly nearby
       data.nearbyPlayers.forEach((p) => {
+        // If we are pending disconnect for this user, CANCEL it.
+        if (this.disconnectTimers.has(p.id)) {
+          console.log(`✨ Player ${p.username} returned within grace period!`);
+          clearTimeout(this.disconnectTimers.get(p.id));
+          this.disconnectTimers.delete(p.id);
+          // We consider them still "nearby", so we don't need to call again.
+          return;
+        }
+
         if (!this.currentNearbyPlayers.has(p.id)) {
-          console.log("🆕 New player in range, call:", p.username, p.id);
+          // console.log("🆕 New player in range, call:", p.username, p.id);
+
           if (!peerService.peer) {
-            console.error("❌ Cannot call - PeerJS not initialized");
+            // peer not ready
           } else if (!peerService.localStream) {
-            console.error("❌ Cannot call - No local stream (enable mic)");
+            // mic not enabled - silence error to avoid spam
           } else {
+            // Check if actively in call to avoid double-dialing? 
+            // PeerService handles it, but let's be safe
             peerService.callPeer(p.id);
             this.currentNearbyPlayers.add(p.id);
           }
-        } else {
-          // console.log("✅ Already in call with:", p.username); // Also commented out
         }
       });
     });
 
     socketService.onPlayerInProximity((data) => {
-      // console.log("👥 In proximity of:", data.username, "Distance:", data.distance); // Also commented out
+      // console.log("👥 In proximity of:", data.username, "Distance:", data.distance); 
     });
   }
 
@@ -317,6 +343,12 @@ export default class WorldScene extends Phaser.Scene {
       delete this.audioElements[peerId];
     }
 
+    // Also clear any pending timers if they exist
+    if (this.disconnectTimers.has(peerId)) {
+      clearTimeout(this.disconnectTimers.get(peerId));
+      this.disconnectTimers.delete(peerId);
+    }
+
     this.currentNearbyPlayers.delete(peerId);
   }
 
@@ -333,12 +365,12 @@ export default class WorldScene extends Phaser.Scene {
     );
 
     // radius used below in getNearByPlayers(); map to [0..1]
-    const maxDist = 300;
+    const maxDist = 150;
     const volume = Math.max(0, 1 - distance / maxDist);
     audioElement.volume = volume;
   }
 
-  getNearByPlayers(radius = 300) {
+  getNearByPlayers(radius = 150) {
     const nearbyPlayers = [];
 
     // Fallback: pure distance
@@ -519,6 +551,145 @@ export default class WorldScene extends Phaser.Scene {
     });
   }
 
+  // Detect mobile / small screen
+  isMobileDevice() {
+    const device = this.sys.game.device;
+    const smallScreen = window.innerWidth <= 768;
+    return !device.os.desktop || smallScreen;
+  }
+
+  // Create joystick visuals & pointer events
+  createMobileJoystick() {
+    if (!this.isMobileDevice()) return;
+
+    const radius = 50;
+    const thumbRadius = 25;
+
+    // Base circle
+    this.joystickBase = this.add.circle(0, 0, radius, 0x000000, 0.25);
+    // Thumb circle
+    this.joystickThumb = this.add.circle(0, 0, thumbRadius, 0xffffff, 0.7);
+
+    this.joystickBase.setScrollFactor(0);
+    this.joystickThumb.setScrollFactor(0);
+    this.joystickBase.setDepth(1000);
+    this.joystickThumb.setDepth(1001);
+
+    // Start invisible
+    this.joystickBase.setVisible(false);
+    this.joystickThumb.setVisible(false);
+
+    // Pointer down: show joystick and start movement
+    this.input.on("pointerdown", (pointer) => {
+      if (!this.isMobileDevice()) return;
+      if (this.inputManager?.chatFocused) return;
+
+      // optional: restrict to left half of screen to avoid UI
+      const halfWidth = this.cameras.main.width / 2;
+      if (pointer.x > halfWidth) return;
+
+      this.joystickActive = true;
+      this.joystickBase.setPosition(pointer.x, pointer.y);
+      this.joystickThumb.setPosition(pointer.x, pointer.y);
+      this.joystickBase.setVisible(true);
+      this.joystickThumb.setVisible(true);
+
+      this.updateJoystickFromPointer(pointer);
+    });
+
+    // Pointer move: update thumb + direction
+    this.input.on("pointermove", (pointer) => {
+      if (!this.joystickActive) return;
+      this.updateJoystickFromPointer(pointer);
+    });
+
+    // Pointer up: hide joystick + stop movement
+    this.input.on("pointerup", () => {
+      if (!this.joystickActive) return;
+      this.joystickActive = false;
+      this.joystickBase.setVisible(false);
+      this.joystickThumb.setVisible(false);
+
+      // All directions off
+      this.applyJoystickDirection({ up: false, down: false, left: false, right: false });
+    });
+  }
+
+  // Convert pointer delta into directions + call InputManager
+  updateJoystickFromPointer(pointer) {
+    if (!this.joystickBase || !this.joystickThumb) return;
+
+    const baseX = this.joystickBase.x;
+    const baseY = this.joystickBase.y;
+
+    const dx = pointer.x - baseX;
+    const dy = pointer.y - baseY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    const maxDist = 60;
+    const deadZone = 10;
+
+    // Clamp thumb to max radius
+    let offsetX = dx;
+    let offsetY = dy;
+    if (dist > maxDist) {
+      const scale = maxDist / dist;
+      offsetX = dx * scale;
+      offsetY = dy * scale;
+    }
+
+    this.joystickThumb.setPosition(baseX + offsetX, baseY + offsetY);
+
+    // Inside dead zone → no movement
+    if (dist < deadZone) {
+      this.applyJoystickDirection({ up: false, down: false, left: false, right: false });
+      return;
+    }
+
+    // Decide directions based on dominant axis
+    const dir = { up: false, down: false, left: false, right: false };
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // horizontal dominance
+      if (dx < -deadZone) dir.left = true;
+      else if (dx > deadZone) dir.right = true;
+    } else {
+      // vertical dominance
+      if (dy < -deadZone) dir.up = true;
+      else if (dy > deadZone) dir.down = true;
+    }
+
+    this.applyJoystickDirection(dir);
+  }
+
+  // Compare with previous joystick direction and emit gameInput via InputManager
+  applyJoystickDirection(newDir) {
+    const prev = this.joystickDirection;
+
+    const emit = (type, action) => {
+      // We leverage InputManager's existing pipeline
+      this.inputManager.forwardToGame(type, null, action);
+    };
+
+    // UP
+    if (newDir.up && !prev.up) emit("keydown", "MOVE_UP");
+    if (!newDir.up && prev.up) emit("keyup", "MOVE_UP");
+
+    // DOWN
+    if (newDir.down && !prev.down) emit("keydown", "MOVE_DOWN");
+    if (!newDir.down && prev.down) emit("keyup", "MOVE_DOWN");
+
+    // LEFT
+    if (newDir.left && !prev.left) emit("keydown", "MOVE_LEFT");
+    if (!newDir.left && prev.left) emit("keyup", "MOVE_LEFT");
+
+    // RIGHT
+    if (newDir.right && !prev.right) emit("keydown", "MOVE_RIGHT");
+    if (!newDir.right && prev.right) emit("keyup", "MOVE_RIGHT");
+
+    this.joystickDirection = newDir;
+  }
+
   setupInputHandlers() {
     this.events.on("gameInput", (input) => this.handleGameInput(input));
   }
@@ -640,37 +811,14 @@ export default class WorldScene extends Phaser.Scene {
     // Nearby players ping (throttled)
     const now = Date.now();
     if (now - this.lastNearbyPlayersUpdate >= this.nearbyPlayersUpdateInterval) {
-      const nearbyPlayers = this.getNearByPlayers(300);
+      const nearbyPlayers = this.getNearByPlayers(150);
 
       // Always send, even if empty -> server can end stale calls
       socketService.emitNearbyPlayers({
-        playerId: socketService.socket.id,
-        nearbyPlayers,
-        count: nearbyPlayers.length,
+        nearbyPlayers: nearbyPlayers,
       });
-
-      // Update spatial volumes
-      nearbyPlayers.forEach((p) => this.updateAudioVolume(p.id));
 
       this.lastNearbyPlayersUpdate = now;
     }
-  }
-
-  shutdown() {
-    if (this.positionUpdateInterval) clearInterval(this.positionUpdateInterval);
-    if (this.inputManager) this.inputManager.destroy();
-
-    // PeerJS cleanup
-    peerService.destroy();
-
-    // Remove audio elements
-    Object.values(this.audioElements).forEach((audio) => {
-      audio.pause();
-      audio.srcObject = null;
-      if (audio.parentNode) audio.parentNode.removeChild(audio);
-    });
-    this.audioElements = {};
-
-    socketService.removeAllListeners();
   }
 }

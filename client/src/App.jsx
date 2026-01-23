@@ -7,6 +7,8 @@ import './styles/App.css';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 //game
 import Metaverse from './pages/Metaverse';
@@ -20,9 +22,11 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/metaverse" />} />
                 <Route path="/signup" element={!isAuthenticated ? <SignupPage /> : <Navigate to="/metaverse" />} />
-                <Route 
-                    path="/metaverse" 
-                    element={isAuthenticated ? <Metaverse /> : <Navigate to="/login" />} 
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                <Route
+                    path="/metaverse"
+                    element={isAuthenticated ? <Metaverse /> : <Navigate to="/login" />}
                 />
             </Routes>
         </Router>
