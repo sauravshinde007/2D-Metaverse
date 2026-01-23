@@ -14,20 +14,76 @@ const LoginPage = () => {
   const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
+    e.preventDefault();
+    setError("");
+
     try {
       const response = await axios.post(`${serverUrl}/api/auth/login`, {
         username,
         password,
-      })
-      const { token, ...userData } = response.data
-      login(userData, token)
-      navigate('/metaverse')
+      });
+
+      // Normal successful login
+      const { token, userId, username: serverUsername, role, email } = response.data;
+      // shape user object for AuthContext
+      login({ id: userId, username: serverUsername, role, email }, token);
+      navigate("/metaverse");
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to log in.')
+      const status = err.response?.status;
+
+      // 🔁 409 means "already logged in somewhere else"
+      if (
+        status === 409 &&
+        err.response?.data?.sessionActive
+      ) {
+        const confirmSwitch = window.confirm(
+          err.response.data.message ||
+          "You are already logged in on another device. Do you want to switch to this device?"
+        );
+
+        if (!confirmSwitch) {
+          // User chose NOT to switch – keep old device active
+          setError("Login cancelled. You are still logged in on the other device.");
+          return;
+        }
+
+        // User said YES -> try again with force: true
+        try {
+          const forceResponse = await axios.post(
+            `${serverUrl}/api/auth/login`,
+            {
+              username,
+              password,
+              force: true,
+            }
+          );
+
+          const {
+            token,
+            userId,
+            username: serverUsername,
+            role,
+            email,
+          } = forceResponse.data;
+
+          login({ id: userId, username: serverUsername, role, email }, token);
+          navigate("/metaverse");
+          return;
+        } catch (forceErr) {
+          setError(
+            forceErr.response?.data?.message ||
+            "Failed to log in after confirming session switch."
+          );
+          return;
+        }
+      }
+
+      // Other errors (invalid creds, server error, etc.)
+      setError(
+        err.response?.data?.message || "Failed to log in."
+      );
     }
-  }
+  };
 
   return (
     <div className="min-h-screen relative bg-gradient-to-b from-[#14141a] via-[#0d0d14] to-black text-[#e6e7ea] overflow-hidden">
@@ -68,7 +124,7 @@ const LoginPage = () => {
                   htmlFor="username"
                   className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
                 >
-                  Username
+                  Email or Username
                 </label>
                 <input
                   id="username"
@@ -77,18 +133,26 @@ const LoginPage = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-[#9b99fe] focus:ring-1 focus:ring-[#9b99fe] transition"
-                  placeholder="your_username"
+                  placeholder="username or email"
                   autoComplete="username"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label
-                  htmlFor="password"
-                  className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
-                >
-                  Password
-                </label>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+                  >
+                    Password
+                  </label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-[#9b99fe] hover:text-[#b3b2ff] transition-colors"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
                 <input
                   id="password"
                   type="password"
@@ -126,9 +190,9 @@ const LoginPage = () => {
               </p>
             </form>
           </div>
-        </div>
-      </main>
-    </div>
+        </div >
+      </main >
+    </div >
   )
 }
 

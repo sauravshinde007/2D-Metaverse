@@ -12,7 +12,7 @@ export const ChatProvider = ({ children }) => {
     const [chatClient, setChatClient] = useState(null);
     const [channel, setChannel] = useState(null);
     const [isConnecting, setIsConnecting] = useState(true);
-    const { user, token } = useAuth();
+    const { user, token, logout } = useAuth();
 
     useEffect(() => {
         // This is the main connection and cleanup logic
@@ -22,7 +22,7 @@ export const ChatProvider = ({ children }) => {
         const initChat = async () => {
             if (!user || !token) {
                 setIsConnecting(false);
-                return; // Not ready to connect
+                return;
             }
 
             setIsConnecting(true);
@@ -37,6 +37,11 @@ export const ChatProvider = ({ children }) => {
                 if (didAbort) return;
 
                 if (!response.ok) {
+                    if(response.status === 401) {
+                        // Unauthorized, likely due to invalid/expired token
+                        console.warn('🔒 Unauthorized from /api/stream/get-token, logging out.');
+                        logout();
+                    }
                     throw new Error(`Failed to get Stream token: ${response.statusText}`);
                 }
 

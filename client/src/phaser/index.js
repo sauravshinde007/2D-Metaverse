@@ -11,6 +11,7 @@ export default function startGame(username) {
     return null;
   }
 
+  //if a game instance already exists, destroy it before creating a new one
   if (window._phaserGame) {
     window._phaserGame.destroy(true);
     window._phaserGame = null;
@@ -34,7 +35,7 @@ export default function startGame(username) {
       },
     },
     render: {
-      pixelArt: true,
+      pixelArt: true, // Enable pixel art rendering
     },
     canvasStyle: "image-rendering: pixelated;",
     scene: [],

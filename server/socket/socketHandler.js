@@ -17,22 +17,40 @@ export default (io) => {
           return;
         }
 
-        // If user already has an active session, tell old socket to disconnect
+        // If user already has an active session, force old session to logout
         if (user.activeSocketId && user.activeSocketId !== socket.id) {
+          const oldSocketId = user.activeSocketId;
+
           console.log(
-            `User '${username}' already active (${user.activeSocketId}). Forcing old session to disconnect.`
+            `User '${username}' already active (${oldSocketId}). Forcing old session to disconnect.`
           );
-          io.to(user.activeSocketId).emit(
+
+          // Tell old client to log out
+          io.to(oldSocketId).emit(
             "forceDisconnect",
             "You have logged in from another device."
           );
+
+          // 🔴 Immediately clean up old player on the server
+          const oldPlayer = players[oldSocketId];
+          if (oldPlayer) {
+            delete players[oldSocketId];
+            io.emit("playerLeft", oldSocketId);
+          }
+
+          // 🔴 Optionally, hard-disconnect the old socket if it's still alive
+          const oldSocket = io.sockets.sockets.get(oldSocketId);
+          if (oldSocket) {
+            oldSocket.disconnect(true);
+          }
         }
 
-        // Mark this socket as the active session
+        // Mark THIS socket as the active session
         user.activeSocketId = socket.id;
         await user.save();
 
         console.log(`${username} joined with socket: ${socket.id}`);
+
         players[socket.id] = {
           username,
           x: 1162,
@@ -44,6 +62,7 @@ export default (io) => {
 
         // Send full state to the new player
         socket.emit("players", players);
+
         // Announce to others
         socket.broadcast.emit("playerJoined", {
           id: socket.id,
@@ -114,7 +133,6 @@ export default (io) => {
       console.log(`Registered PeerID ${p.peerId} for ${p.username}`);
     });
 
-    // Disconnect cleanup
     socket.on("disconnect", async () => {
       const p = players[socket.id];
       if (!p) {
@@ -123,8 +141,8 @@ export default (io) => {
       }
 
       console.log(`${p.username} disconnected: ${socket.id}`);
+
       try {
-        // Clear active session for this user
         const user = await User.findOne({ activeSocketId: socket.id });
         if (user) {
           user.activeSocketId = null;

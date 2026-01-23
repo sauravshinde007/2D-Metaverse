@@ -8,6 +8,7 @@ import { cn } from '../lib/utils'
 
 const SignupPage = () => {
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('') // Added email state
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const { login } = useAuth()
@@ -20,10 +21,11 @@ const SignupPage = () => {
     try {
       const response = await axios.post(`${serverUrl}/api/auth/signup`, {
         username,
+        email,
         password,
       })
-      const { token, ...userData } = response.data
-      login(userData, token)
+      const { token, userId, username: serverUsername, role, email: serverEmail } = response.data
+      login({ id: userId, username: serverUsername, role, email: serverEmail }, token)
       navigate('/metaverse')
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to sign up.')
@@ -80,6 +82,25 @@ const SignupPage = () => {
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-[#9b99fe] focus:ring-1 focus:ring-[#9b99fe] transition"
                   placeholder="choose_a_username"
                   autoComplete="username"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+                >
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-[#9b99fe] focus:ring-1 focus:ring-[#9b99fe] transition"
+                  placeholder="you@example.com"
+                  autoComplete="email"
                 />
               </div>
 

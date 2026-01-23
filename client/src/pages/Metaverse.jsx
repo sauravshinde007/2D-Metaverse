@@ -20,6 +20,7 @@ function Metaverse() {
             const game = startGame(user.username);
 
             return () => {
+                //if game already loadaed, destroy it on unmount
                 if (window._phaserGame) {
                     window._phaserGame.destroy(true);
                     window._phaserGame = null;

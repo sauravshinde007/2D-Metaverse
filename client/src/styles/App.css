@@ -1,297 +1,115 @@
-/* client/src/styles/App.css */
-/* ==========================================================================
-   1. GLOBAL STYLES & FONT IMPORTS
-   ========================================================================== */
-
-/* --- Google Font Import --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-
-
-/* --- CSS Variables for Landing/Auth Theme --- */
-:root {
-  --background-color: #0A0A0A;
-  --text-color: #E0E0E0;
-  --text-secondary-color: #A0A0A0;
-  --border-color: #333333;
-  --accent-gradient: linear-gradient(90deg, #62FFFF, #FF62FF, #FFFF62);
-}
-
-/* --- Global Reset & Body Styles --- */
-html {
-  height: 100%;
-}
-
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
-#root {
-  height: 100%;
-}
-
-
-/* ==========================================================================
-   2. LANDING & AUTH PAGE STYLES (Chutes.ai Theme)
-   ========================================================================== */
-
-/* --- Layout Containers --- */
-.landing-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-  min-height: 100%; 
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box; 
-  padding-top: 100px;
-}
-
-.landing-container main {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.auth-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-/* --- Navbar --- */
-.navbar {
-  padding: 20px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo {
-  font-weight: 800;
-  font-size: 24px;
-  color: #FFFFFF;
-  text-decoration: none;
-}
-
-.nav-buttons {
-  display: flex;
-  gap: 12px;
-}
-
-/* --- Hero Section --- */
-.hero {
-  text-align: center;
-  padding: 20px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.hero h1 {
-  font-size: 72px;
-  font-weight: 700;
-  margin: 0 auto;
-  max-width: 900px;
-  line-height: 1.1;
-  color: #FFFFFF;
-}
-
-.gradient-text {
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.hero .subtitle {
-  font-size: 20px;
-  max-width: 600px;
-  margin: 30px auto;
-  color: var(--text-secondary-color);
-  line-height: 1.6;
-}
-
-.hero-buttons {
-  margin-top: 40px;
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-}
-
-/* --- Reusable Button Styles --- */
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
-}
-
-.btn-primary {
-  background-color: #FFFFFF;
-  color: #0A0A0A;
-}
-
-.btn-primary:hover {
-  background-color: #DDDDDD;
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: #FFFFFF;
-  border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-  background-color: #1a1a1a;
-  border-color: #555555;
-}
-
-/* --- Auth Forms --- */
-.auth-form {
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 40px;
-  background-color: #111111;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-}
-
-.auth-form h2 {
-  text-align: center;
-  font-size: 32px;
-  margin: 0 0 10px 0;
-  color: #FFFFFF;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.auth-form input {
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background-color: var(--background-color);
-  color: var(--text-color);
-  font-size: 16px;
-  transition: border-color 0.2s ease;
-}
-
-.auth-form input:focus {
-  outline: none;
-  border-color: #62FFFF;
-}
-
-.auth-form .btn {
-  width: 100%;
-  padding: 14px;
-  font-size: 18px;
-}
-
-.auth-form .error-message {
-  color: #FF6B6B;
-  text-align: center;
-  font-size: 14px;
-}
-
-.auth-form .switch-auth {
-  text-align: center;
-  color: var(--text-secondary-color);
-}
-
-.auth-form .switch-auth a {
-  color: #FFFFFF;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.auth-form .switch-auth a:hover {
-  text-decoration: underline;
-}
-
-/* --- Navbar --- */
-.navbar {
-  /* Positioning */
-  position: sticky; /* Sticks to the top on scroll */
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1000; /* Ensures it stays on top of other content */
-  
-  /* Glassmorphism Effect */
-  background-color: rgba(10, 10, 10, 0.65); /* Dark background with 65% opacity */
-  backdrop-filter: blur(10px); /* This is the magic for the frosted glass effect */
-  -webkit-backdrop-filter: blur(10px); /* For Safari browser support */
-  
-  /* Styling */
-  border-bottom: 1px solid rgba(51, 51, 51, 0.5); /* Semi-transparent border */
-  padding: 16px 0; /* Adjusted vertical padding */
-  transition: background-color 0.3s ease;
-}
-
-.navbar:hover {
-  background-color: rgba(10, 10, 10, 0.8); /* Slightly less transparent on hover */
-}
-
-/* New rule for the inner container we added in the JSX */
-.navbar .navbar-content {
-  /* Centering the container itself */
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  
-  /* Spacing for content inside */
-  padding: 0 24px;
-  width: 100%;
-  box-sizing: border-box;
-
-  /* Aligning the items inside (logo left, buttons right) */
-  display: flex;
-  align-items: center;
-  justify-content: space-between; 
-}
-
 /* ==========================================================================
    3. METAVERSE / IN-GAME UI STYLES (Blue Eclipse Theme)
    ========================================================================== */
 
-/* --- Game Layout --- */
+/* --- Root layout for Metaverse page --- */
 .app-root {
   height: 100vh;
   display: flex;
 }
+
+/* We only apply the split layout when we're on the Metaverse page */
+.metaverse-root {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: #020617; /* dark slate background */
+  color: #e5e7eb;
+}
+
+/* --- GAME AREA WRAPPER --- */
+.game-wrapper {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+/* Phaser canvas container */
 .game-container {
   position: absolute;
   inset: 0;
 }
+
+/* Phaser canvas */
 canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
 }
 
-/* --- HUD POSITIONING --- */
+/* --- HUD OVERLAY ON TOP OF GAME --- */
+.game-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* clicks go through by default */
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.game-hud > * {
+  pointer-events: auto; /* children (buttons, videos) are clickable */
+}
+
+/* Top-right: local self video */
+.hud-top-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+/* Bottom: video grid + voice controls row */
+.hud-bottom {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.hud-bottom-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 900px;
+  width: 100%;
+}
+
+.hud-video-grid {
+  flex: 2 1 0;
+  min-width: 0;
+}
+
+.hud-voice-controls {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- SIDEBAR PANEL (RIGHT ON DESKTOP) --- */
+.sidebar-panel {
+  flex: 0 0 320px;
+  max-width: 360px;
+  min-width: 260px;
+  height: 100%;
+  border-left: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow-y: auto;
+}
+
+/* Make scrollbars less ugly (optional) */
+.sidebar-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 999px;
+}
+
+/* --- OLD HUD ROOT (kept in case something still uses it) --- */
 .hud-root {
   position: absolute;
   top: 1.25rem;
@@ -322,17 +140,15 @@ canvas {
 
 /* --- CHAT WINDOW --- */
 .chat-window-discord {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-
-    /* Keep your existing styles for background, etc. */
-    background-color: #17163A; /* Your existing BG */
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #17163A;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* --- CHAT HEADER --- */
@@ -348,37 +164,100 @@ canvas {
   box-shadow: 0 2px 4px rgba(15, 14, 71, 0.5);
 }
 
-/* ADD THIS NEW RULE FOR THE LOGOUT BUTTON */
+/* --- LOGOUT / UI BUTTON --- */
 .ui-button {
-  /* Positioning */
   position: absolute;
   top: 20px;
   left: 20px;
   z-index: 101;
-
-  /* Styling (fits the Blue Eclipse Theme) */
   padding: 8px 16px;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: #E0E0E0; /* Light text */
-  background-color: rgba(39, 39, 87, 0.7); /* Semi-transparent dark blue from your theme */
-  border: 1px solid #505081; /* Medium purple border */
+  color: #E0E0E0;
+  background-color: rgba(39, 39, 87, 0.7);
+  border: 1px solid #505081;
   border-radius: 8px;
   cursor: pointer;
-  
-  /* Nice glass effect for the in-game UI */
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   transition: all 0.2s ease-in-out;
 }
 
-
-/* Clear 'danger' indication on hover */
 .ui-button:hover {
-  background-color: rgba(220, 53, 69, 0.9); /* Danger Red */
+  background-color: rgba(220, 53, 69, 0.9);
   border-color: rgba(255, 100, 100, 0.8);
   color: #FFFFFF;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* --------------------
+   3.1 RESPONSIVE LAYOUT
+   -------------------- */
+
+/* Mobile: stack game on top, sidebar bottom, HUD tightened */
+@media (max-width: 768px) {
+  .metaverse-root {
+    flex-direction: column;
+  }
+
+  .game-wrapper {
+    height: 60vh; /* game on top */
+  }
+
+  .sidebar-panel {
+    flex: 0 0 auto;
+    height: 40vh;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    border-left: none;
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+  }
+
+  .game-hud {
+    padding: 0.5rem;
+  }
+
+  .hud-top-right {
+    justify-content: center;
+  }
+
+  .hud-bottom {
+    justify-content: stretch;
+  }
+
+  .hud-bottom-row {
+    flex-direction: column-reverse; /* controls near thumb */
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .hud-video-grid,
+  .hud-voice-controls {
+    flex: 0 0 auto;
+  }
+
+  /* Constrain local self-view so it doesn't cover too much */
+  .hud-top-right video,
+  .hud-top-right .local-video-container {
+    max-width: 40vw;
+    max-height: 18vh;
+  }
+}
+
+/* Tablets: slightly narrower sidebar, tighter HUD padding */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar-panel {
+    flex: 0 0 280px;
+  }
+
+  .game-hud {
+    padding: 0.75rem;
+  }
+
+  .hud-bottom-row {
+    gap: 0.5rem;
+  }
 }

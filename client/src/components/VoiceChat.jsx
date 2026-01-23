@@ -8,10 +8,10 @@ import { useAuth } from '../context/AuthContext';
 export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
   const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false);
-  // We no longer manage video state here; it's passed in as a prop.
+  // Renamed micEnabled to isConnected to better reflect state (we can be connected but muted)
+  const [isConnected, setIsConnected] = useState(false);
   const [activeCalls, setActiveCalls] = useState([]);
   const [micPermission, setMicPermission] = useState('pending');
-  const [micEnabled, setMicEnabled] = useState(false);
   const [isTransmitting, setIsTransmitting] = useState(false);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
       try {
         const result = await navigator.permissions.query({ name: 'microphone' });
         setMicPermission(result.state);
-        
+
         result.addEventListener('change', () => {
           setMicPermission(result.state);
         });
@@ -32,7 +32,7 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
 
     // Check if media is already enabled
     if (peerService.localStream) {
-      setMicEnabled(true);
+      setIsConnected(true);
       // Sync prop state with stream state on initial load
       const videoTrack = peerService.localStream.getVideoTracks()[0];
       if (videoTrack) {
@@ -44,20 +44,20 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
     const interval = setInterval(() => {
       const calls = peerService.getActiveCalls();
       setActiveCalls(calls);
-      
+
       // Check if we're transmitting (have active calls and mic is enabled and not muted)
       setIsTransmitting(calls.length > 0 && peerService.localStream && !isMuted);
-      
+
       // Check if stream exists
-      if (peerService.localStream && !micEnabled) {
-        setMicEnabled(true);
+      if (peerService.localStream && !isConnected) {
+        setIsConnected(true);
       }
     }, 500);
 
     return () => {
       clearInterval(interval);
     };
-  }, [isMuted, micEnabled, setIsVideoEnabled]);
+  }, [isMuted, isConnected, setIsVideoEnabled]);
 
   const toggleMute = () => {
     const newMutedState = !isMuted;
@@ -67,26 +67,43 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
 
   const toggleVideo = () => {
     const newVideoState = !isVideoEnabled;
-    peerService.setVideoEnabled(newVideoState);
-    // Call the setter prop from Metaverse.jsx
+    // Set local state
     setIsVideoEnabled(newVideoState);
+    // Tell peer service to enable/disable tracks
+    peerService.setVideoEnabled(newVideoState);
+
+    // Explicitly log the change for debugging
+    console.log(`🎥 Toggled Video: ${newVideoState ? 'ON' : 'OFF'}`);
   };
 
-  const enableMedia = async () => {
+  // Robust media initialization
+  const initializeMedia = async (shouldEnableVideo = false) => {
     try {
-      console.log('🎤 Enabling media (audio & video)...');
-      
+      console.log('🎤 Initializing media...');
+
       // Request both audio and video
-      await peerService.getUserMedia({ 
-        audio: true, 
+      await peerService.getUserMedia({
+        audio: true,
         video: { width: 320, height: 240 } // Request low-res video
       });
-      
-      setMicEnabled(true); // This state now means "media is enabled"
-      setIsVideoEnabled(false); // Video is disabled by default
+
+      setIsConnected(true);
+
+      // Set initial states
+      // Audio is on by default when joining
+      setIsMuted(false);
+      peerService.setAudioMuted(false);
+
+      // Video depends on which button was clicked
+      if (shouldEnableVideo) {
+        setIsVideoEnabled(true);
+        peerService.setVideoEnabled(true);
+      } else {
+        setIsVideoEnabled(false);
+        peerService.setVideoEnabled(false);
+      }
+
       console.log('✅ Media enabled via UI');
-      console.log('📊 Media Details:');
-      console.log('  - Has local stream:', !!peerService.localStream);
     } catch (error) {
       console.error('Failed to enable media:', error);
       if (error.name === 'NotAllowedError') {
@@ -99,9 +116,26 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
     }
   };
 
+  // Handlers for the buttons
+  const handleMicClick = () => {
+    if (!isConnected) {
+      initializeMedia(false); // Join with Audio only
+    } else {
+      toggleMute();
+    }
+  };
+
+  const handleVideoClick = () => {
+    if (!isConnected) {
+      initializeMedia(true); // Join with Video + Audio
+    } else {
+      toggleVideo();
+    }
+  };
+
   const testConnection = () => {
     console.log('🧪 === CONNECTION TEST ===');
-    console.log('Microphone enabled:', micEnabled);
+    console.log('Microphone enabled:', isConnected);
     console.log('Video enabled:', isVideoEnabled);
     console.log('PeerService.peer:', peerService.peer);
     console.log('PeerService.localStream:', peerService.localStream);
@@ -119,42 +153,41 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
 
   return (
     <div className="voice-chat-container">
-      
+
       {/* Avatar */}
       <div className="avatar-display">
         {user?.username?.[0]?.toUpperCase() || '?'}
-        {micEnabled && <div className="online-indicator"></div>}
+        {isConnected && <div className="online-indicator"></div>}
       </div>
 
       {/* Microphone Button */}
       <button
-        className={`mic-button ${micEnabled && !isMuted ? 'active' : 'muted'}`}
-        onClick={micEnabled ? toggleMute : enableMedia} // Calls enableMedia
-        title={micEnabled ? (isMuted ? 'Unmute' : 'Mute') : 'Enable Media'}
+        className={`mic-button ${isConnected && !isMuted ? 'active' : 'muted'}`}
+        onClick={handleMicClick}
+        title={isConnected ? (isMuted ? 'Unmute' : 'Mute') : 'Join Audio'}
       >
-        <img 
-          src={micEnabled && !isMuted ? '/icons/mic-active.png' : '/icons/mic-muted.png'} 
-          alt={micEnabled && !isMuted ? 'Microphone Active' : 'Microphone Muted'} 
+        <img
+          src={isConnected && !isMuted ? '/icons/mic-active.png' : '/icons/mic-muted.png'}
+          alt="Microphone"
           className="mic-icon"
         />
       </button>
 
       {/* Camera Button (uses props) */}
-      <button 
+      <button
         className={`mic-button ${isVideoEnabled ? 'active' : 'muted'}`}
-        onClick={toggleVideo}
-        title={isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
-        disabled={!micEnabled} // Can't turn on video if media isn't enabled
+        onClick={handleVideoClick}
+        title={isConnected ? (isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On') : 'Join with Video'}
       >
-        <img 
-          src={isVideoEnabled ? '/icons/camera-on.png' : '/icons/camera-off.png'} 
-          alt={isVideoEnabled ? 'Camera On' : 'Camera Off'} 
+        <img
+          src={isVideoEnabled ? '/icons/camera-on.png' : '/icons/camera-off.png'}
+          alt={isVideoEnabled ? 'Camera On' : 'Camera Off'}
           className="mic-icon"
         />
       </button>
 
       {/* Test Button */}
-      <button 
+      <button
         onClick={testConnection}
         className="mic-button debug-button"
         title="Test Connection (Check Console)"
