@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import peerService from '../services/peerService';
+import socketService from '../services/socketService';
 import '../styles/videogrid.css';
 
 const MAX_REMOTE_VIDEOS = 4;
@@ -17,7 +18,7 @@ function getUsernameFromPeerId(peerId) {
   return peerId.slice(0, 6) + '...';
 }
 
-const VideoPlayer = ({ stream, peerId }) => {
+const VideoPlayer = ({ stream, peerId, isVideoEnabledBySignaling }) => {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
   const username = getUsernameFromPeerId(peerId);
@@ -30,11 +31,12 @@ const VideoPlayer = ({ stream, peerId }) => {
       const videoTracks = stream.getVideoTracks();
       const videoTrack = videoTracks[0];
 
-      // Robust check: active ONLY if track exists and is NOT muted.
-      // We explicitly ignore 'enabled' for remote streams as 'onmute' is the source of truth for remote cam status.
-      const isVideoActive = videoTrack && !videoTrack.muted;
-
-      // console.log(`🎥 Stream ${stream.id} checking: Track=${!!videoTrack}, Muted=${videoTrack?.muted}, Active=${isVideoActive}`);
+      // Robust check: active ONLY if:
+      // 1. Track exists
+      // 2. Track is not muted (WebRTC level)
+      // 3. Signaling says it should be enabled (Server level truth)
+      // Note: isVideoEnabledBySignaling defaults to false if not yet received, preventing black box on join.
+      const isVideoActive = videoTrack && !videoTrack.muted && isVideoEnabledBySignaling;
 
       setHasVideo(prev => {
         if (prev !== isVideoActive) {
@@ -58,6 +60,9 @@ const VideoPlayer = ({ stream, peerId }) => {
       checkVideoState();
     };
 
+    // Safety check: sometimes events don't fire reliably
+    const checkInterval = setInterval(checkVideoState, 1000);
+
     stream.addEventListener('addtrack', handleTrackChange);
     stream.addEventListener('removetrack', handleTrackChange);
 
@@ -69,6 +74,7 @@ const VideoPlayer = ({ stream, peerId }) => {
     });
 
     return () => {
+      clearInterval(checkInterval);
       stream.removeEventListener('addtrack', handleTrackChange);
       stream.removeEventListener('removetrack', handleTrackChange);
       videoTracks.forEach(track => {
@@ -77,7 +83,7 @@ const VideoPlayer = ({ stream, peerId }) => {
         track.removeEventListener('ended', handleTrackChange);
       });
     };
-  }, [stream]);
+  }, [stream, isVideoEnabledBySignaling]);
 
   // 2. Attach stream to DOM when visible
   useEffect(() => {
@@ -111,23 +117,41 @@ const VideoPlayer = ({ stream, peerId }) => {
 
 export default function VideoGrid() {
   const [remoteStreams, setRemoteStreams] = useState([]);
+  // Map peerId -> boolean
+  const [videoStatusMap, setVideoStatusMap] = useState({});
+
+  useEffect(() => {
+    const handleVideoStatus = ({ id, videoEnabled }) => {
+      setVideoStatusMap(prev => ({
+        ...prev,
+        [id]: videoEnabled
+      }));
+    };
+
+    socketService.onPlayerVideoStatus(handleVideoStatus);
+
+    // Also listen for initial players list (if it contains video status) - though 'players' socket event is handled in World.js usually.
+    // We might need to ask World.js or just wait for updates.
+    // For robustness, let's just listen.
+
+    return () => {
+      // cleanup (we don't have an off method for specific callback in current wrapper easily unless added, 
+      // but adding a remove-listener usage is good practice)
+      // socketService.offPlayerVideoStatus(handleVideoStatus); // Not implemented yet
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const streams = peerService.getRemoteStreams();
       const limitedStreams = streams.slice(0, MAX_REMOTE_VIDEOS);
 
-      // Simple equality check to avoid redundant re-renders
-      // (Checking length and peerId of first item is a heuristic, specific map check is better)
       setRemoteStreams(prev => {
         // Create maps of IDs to compare
         const prevIds = prev.map(p => p[0]).join(',');
         const newIds = limitedStreams.map(p => p[0]).join(',');
 
         if (prevIds !== newIds) return limitedStreams;
-
-        // Also check if stream objects changed reference (rare but possible)
-        // or if we want to force updates? usually stream obj ref stays same
         return prev;
       });
 
@@ -144,7 +168,12 @@ export default function VideoGrid() {
   return (
     <div className="remote-video-grid-container">
       {remoteStreams.map(([peerId, stream]) => (
-        <VideoPlayer key={peerId} peerId={peerId} stream={stream} />
+        <VideoPlayer
+          key={peerId}
+          peerId={peerId}
+          stream={stream}
+          isVideoEnabledBySignaling={!!videoStatusMap[peerId]}
+        />
       ))}
     </div>
   );

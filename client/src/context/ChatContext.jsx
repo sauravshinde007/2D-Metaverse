@@ -12,6 +12,7 @@ export const ChatProvider = ({ children }) => {
     const [chatClient, setChatClient] = useState(null);
     const [channel, setChannel] = useState(null);
     const [isConnecting, setIsConnecting] = useState(true);
+    const [unreadCounts, setUnreadCounts] = useState({ world: 0, private: 0 });
     const { user, token, logout } = useAuth();
 
     useEffect(() => {
@@ -37,7 +38,7 @@ export const ChatProvider = ({ children }) => {
                 if (didAbort) return;
 
                 if (!response.ok) {
-                    if(response.status === 401) {
+                    if (response.status === 401) {
                         // Unauthorized, likely due to invalid/expired token
                         console.warn('🔒 Unauthorized from /api/stream/get-token, logging out.');
                         logout();
@@ -52,7 +53,7 @@ export const ChatProvider = ({ children }) => {
                     { id: user.username, name: user.username, role: user.role },
                     data.token
                 );
-                
+
                 if (didAbort) return;
 
                 // Get and watch the main channel
@@ -61,6 +62,32 @@ export const ChatProvider = ({ children }) => {
 
                 setChatClient(client);
                 setChannel(mainChannel);
+
+                // Event listener for new messages
+                client.on('message.new', (event) => {
+                    // Ignore own messages
+                    if (event.user.id === client.userID) return;
+
+                    if (event.channel_id === 'metaverse-room') {
+                        setUnreadCounts(prev => ({ ...prev, world: prev.world + 1 }));
+                    } else {
+                        setUnreadCounts(prev => ({ ...prev, private: prev.private + 1 }));
+                    }
+                });
+
+                // Also listen for notifications (when added to new channel etc)
+                client.on('notification.message_new', (event) => {
+                    // Check if it's already handled by message.new (if we are watching the channel)
+                    // Usually notification.message_new comes for channels we aren't actively watching in the UI connection list yet?
+                    // For safety, we can rely on message.new for watched channels.
+                    // But for private chats we might not be watching all of them explicitly until we query.
+                    // Simplified approach: message.new usually covers watched channels.
+                    // If we are notified of a message in a channel we don't have open, it might still fire message.new if we are connected.
+                });
+
+                // Initial unread count fetch (optional, for simple MVP starting at 0 is fine, 
+                // but fetching real counts is better)
+                // const counts = await client.queryChannels(...) loops... let's keep it simple (session based) for now as requested.
 
             } catch (error) {
                 console.error("Failed to initialize chat:", error);
@@ -88,8 +115,12 @@ export const ChatProvider = ({ children }) => {
         };
     }, [user, token]); // Rerun this entire effect if the user or token changes
 
+    const markAsRead = (type) => {
+        setUnreadCounts(prev => ({ ...prev, [type]: 0 }));
+    };
+
     return (
-        <ChatContext.Provider value={{ chatClient, channel, isConnecting }}>
+        <ChatContext.Provider value={{ chatClient, channel, isConnecting, unreadCounts, markAsRead }}>
             {children}
         </ChatContext.Provider>
     );

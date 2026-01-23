@@ -1,10 +1,12 @@
 // client/src/components/LocalVideoView.jsx
 import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import peerService from '../services/peerService';
-import '../styles/localvideoview.css'; // We will create this CSS file next
+import '../styles/localvideoview.css';
 
 export default function LocalVideoView({ isVisible }) {
   const videoRef = useRef(null);
+  const containerRef = useRef(null); // Ref for constraints if needed
 
   useEffect(() => {
     if (isVisible && peerService.localStream) {
@@ -24,15 +26,21 @@ export default function LocalVideoView({ isVisible }) {
   }
 
   return (
-    <div className="local-video-container">
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
+    <motion.div
+      className="local-video-container"
+      drag
+      dragMomentum={false} // Don't slide after release
+      whileHover={{ cursor: 'grab' }}
+      whileTap={{ cursor: 'grabbing', scale: 1.05 }}
+    >
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
         muted // Mute your own video to prevent echo
-        className="local-video-element" 
+        className="local-video-element"
       />
       <span className="local-video-label">Your View</span>
-    </div>
+    </motion.div>
   );
 }

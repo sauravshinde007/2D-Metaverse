@@ -57,6 +57,10 @@ const socketService = {
     socket?.emit("registerPeerId", peerId);
   },
 
+  emitVideoStatus(enabled) {
+    socket?.emit("videoStatus", enabled);
+  },
+
   // ====== LISTEN EVENTS ======
   onPlayers(callback) {
     socket?.on("players", callback);
@@ -80,6 +84,10 @@ const socketService = {
 
   onPlayerInProximity(callback) {
     socket?.on("playerInProximity", callback);
+  },
+
+  onPlayerVideoStatus(callback) {
+    socket?.on("playerVideoStatus", callback);
   },
 
   removeAllListeners() {

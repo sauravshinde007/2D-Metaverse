@@ -1,6 +1,7 @@
 // client/src/components/VoiceChat.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import peerService from '../services/peerService';
+import socketService from '../services/socketService';
 import '../styles/voicechat.css';
 import { useAuth } from '../context/AuthContext';
 
@@ -74,6 +75,7 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
 
     // Explicitly log the change for debugging
     console.log(`🎥 Toggled Video: ${newVideoState ? 'ON' : 'OFF'}`);
+    socketService.emitVideoStatus(newVideoState);
   };
 
   // Robust media initialization
@@ -98,9 +100,11 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
       if (shouldEnableVideo) {
         setIsVideoEnabled(true);
         peerService.setVideoEnabled(true);
+        socketService.emitVideoStatus(true);
       } else {
         setIsVideoEnabled(false);
         peerService.setVideoEnabled(false);
+        socketService.emitVideoStatus(false);
       }
 
       console.log('✅ Media enabled via UI');

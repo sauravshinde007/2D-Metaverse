@@ -8,7 +8,7 @@ import PrivateChatManager from './PrivateChatManager'
 import UserSettingsModal from './UserSettingsModal'
 
 export default function Sidebar() {
-  const { chatClient, channel, isConnecting } = useChat()
+  const { chatClient, channel, isConnecting, unreadCounts, markAsRead } = useChat()
   const { logout } = useAuth()
 
   const [activePanel, setActivePanel] = useState(null)
@@ -17,6 +17,10 @@ export default function Sidebar() {
   const togglePanel = (panelName) => {
     const newPanel = activePanel === panelName ? null : panelName
     setActivePanel(newPanel)
+
+    // Reset unread count when opening panel
+    if (newPanel === 'WORLD') markAsRead('world')
+    if (newPanel === 'PRIVATE') markAsRead('private')
 
     window.dispatchEvent(
       new CustomEvent('chat-focus-change', { detail: { focused: !!newPanel } })
@@ -46,6 +50,8 @@ export default function Sidebar() {
               <path strokeLinecap="round" strokeLinejoin="round"
                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
+            {/* Badge */}
+            {unreadCounts.world > 0 && <Badge count={unreadCounts.world} />}
           </RoundedIconButton>
 
           <RoundedIconButton
@@ -59,6 +65,8 @@ export default function Sidebar() {
               <path strokeLinecap="round" strokeLinejoin="round"
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
+            {/* Badge */}
+            {unreadCounts.private > 0 && <Badge count={unreadCounts.private} />}
           </RoundedIconButton>
 
           <RoundedIconButton
@@ -121,7 +129,7 @@ function RoundedIconButton({ active, title, onClick, children }) {
       title={title}
       onClick={onClick}
       className={[
-        'flex h-11 w-11 items-center justify-center rounded-xl text-zinc-400 transition-all',
+        'relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-400 transition-all', // 'relative' needed for badge positioning
         'hover:text-white hover:bg-zinc-800',
         active
           ? 'bg-zinc-900 text-white ring-2 ring-[#9b99fe] shadow-lg'
@@ -130,5 +138,13 @@ function RoundedIconButton({ active, title, onClick, children }) {
     >
       {children}
     </button>
+  )
+}
+
+function Badge({ count }) {
+  return (
+    <div className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-[#121212]">
+      {count > 99 ? '99+' : count}
+    </div>
   )
 }

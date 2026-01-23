@@ -25,14 +25,30 @@ export default function WorldChat({ chatClient, channel, isConnecting, onClose }
     if (!channel) return
 
     const updateCount = () => {
+      // For livestream-like channels, watcher_count is best
+      if (channel.state.watcher_count !== undefined) {
+        setOnlineCount(channel.state.watcher_count)
+        return
+      }
+
+      // Fallback to members check
       const members = Object.values(channel.state.members || {})
       const online = members.filter((m) => m.user?.online)
       setOnlineCount(online.length)
     }
 
     updateCount()
+
+    // Listen to presence events (for members) and watcher events (for transient users)
     channel.on('presence.diff', updateCount)
-    return () => channel.off('presence.diff', updateCount)
+    channel.on('user.watching.start', updateCount)
+    channel.on('user.watching.stop', updateCount)
+
+    return () => {
+      channel.off('presence.diff', updateCount)
+      channel.off('user.watching.start', updateCount)
+      channel.off('user.watching.stop', updateCount)
+    }
   }, [channel])
 
   // Focus management (avoid interfering with game controls)

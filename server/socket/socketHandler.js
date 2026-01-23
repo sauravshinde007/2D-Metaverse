@@ -57,6 +57,7 @@ export default (io) => {
           y: 1199,
           anim: "idle-down",
           peerId: null,
+          videoEnabled: false, // Default to video off
           nearbyPlayers: [],
         };
 
@@ -131,6 +132,14 @@ export default (io) => {
       if (!p) return;
       p.peerId = String(peerId || "");
       console.log(`Registered PeerID ${p.peerId} for ${p.username}`);
+    });
+
+    // Broadcast video toggle
+    socket.on("videoStatus", (enabled) => {
+      const p = players[socket.id];
+      if (!p) return;
+      p.videoEnabled = !!enabled; // persist on server
+      socket.broadcast.emit("playerVideoStatus", { id: socket.id, videoEnabled: p.videoEnabled });
     });
 
     socket.on("disconnect", async () => {
