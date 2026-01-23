@@ -4,7 +4,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { StreamChat } from "stream-chat";
 import User from "../models/User.js";
-import crypto from "crypto"; // Native Node.js module for tokens
+import crypto from "crypto";
+import passport from "passport";
+import sendEmail from "../utils/sendEmail.js";
 
 console.log('--- In api/auth.js ---');
 console.log('STREAM_API_KEY:', process.env.STREAM_API_KEY);
@@ -109,15 +111,29 @@ router.post("/forgot-password", async (req, res) => {
         // --- MOCK EMAIL SENDING ---
         // In a real SaaS, use Nodemailer/SendGrid here.
         // For now, we log the link to the console for the USER / Dev to click.
+        // Send Email
         const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
 
-        console.log('============================================');
-        console.log('📧 PASSWORD RESET REQUEST');
-        console.log(`To: ${email}`);
-        console.log(`Link: ${resetUrl}`);
-        console.log('============================================');
+        const message = `
+          <h1>You have requested a password reset</h1>
+          <p>Please go to this link to reset your password:</p>
+          <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
+        `;
 
-        res.json({ message: "Password reset link sent to email (Check Server Console)." });
+        try {
+            await sendEmail({
+                to: user.email,
+                subject: 'Password Reset Request',
+                html: message
+            });
+
+            res.json({ message: "Email sent." });
+        } catch (err) {
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpires = undefined;
+            await user.save();
+            return res.status(500).json({ message: "Email could not be sent." });
+        }
 
     } catch (error) {
         console.error("Forgot Password Error:", error);
@@ -154,5 +170,21 @@ router.post("/reset-password", async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
+
+// --- GOOGLE AUTH ROUTES ---
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login', session: false }),
+    async (req, res) => {
+        // Generate JWT for the Google Logged in user
+        const user = req.user;
+        const token = jwt.sign({ userId: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Redirect to frontend with token
+        // In production, might use a cookie or a safer temporary code exchange, but this is standard for MVP
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?token=${token}&userId=${user.id}`);
+    }
+);
 
 export default router;

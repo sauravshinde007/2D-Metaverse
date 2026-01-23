@@ -23,6 +23,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Initialize Passport
+import passport from 'passport';
+import configurePassport from './config/passport.js';
+configurePassport();
+app.use(passport.initialize());
+
 const server = http.createServer(app);
 
 // --- PeerJS Server Setup ---
