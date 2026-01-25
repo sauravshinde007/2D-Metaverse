@@ -26,6 +26,9 @@ export default class WorldScene extends Phaser.Scene {
     this.myRole = 'employee'; // default
     this.roomAccessRules = {};
     this.restrictedZones = []; // { id, x, y, width, height, name }
+
+    // 🔌 Socket Listener References (for cleanup)
+    this.socketHandlers = {};
   }
 
   init(data) {
@@ -149,35 +152,42 @@ export default class WorldScene extends Phaser.Scene {
     this.createMobileJoystick(); // 🔵 Create mobile joysticsk
 
     // Socket event wiring
-    socketService.onPlayers((players) => {
+    // Store handlers so we can remove them later
+    this.socketHandlers.onPlayers = (players) => {
+      if (!this.scene.isActive()) return;
       Object.keys(players).forEach((id) => {
         const myId = socketService.socket?.id;
         if (id !== myId) {
           this.addOtherPlayer(id, players[id]);
         } else {
-          // It's me! Update my role
           if (players[id].role) {
             this.myRole = players[id].role;
             console.log("👮 My Role is:", this.myRole);
-            this.updateZoneVisuals(); // Update visuals based on new role
+            this.updateZoneVisuals();
           }
         }
       });
-    });
+    };
+    socketService.onPlayers(this.socketHandlers.onPlayers);
 
-    socketService.onGameRules((rules) => {
+    this.socketHandlers.onGameRules = (rules) => {
+      if (!this.scene.isActive()) return;
       console.log("📜 Received Game Rules:", rules);
       if (rules.roomAccess) {
         this.roomAccessRules = rules.roomAccess;
         this.updateZoneVisuals();
       }
-    });
+    };
+    socketService.onGameRules(this.socketHandlers.onGameRules);
 
-    socketService.onPlayerJoined((playerData) =>
-      this.addOtherPlayer(playerData.id, playerData)
-    );
+    this.socketHandlers.onPlayerJoined = (playerData) => {
+      if (!this.scene.isActive()) return;
+      this.addOtherPlayer(playerData.id, playerData);
+    };
+    socketService.onPlayerJoined(this.socketHandlers.onPlayerJoined);
 
-    socketService.onPlayerMoved(({ id, pos, anim }) => {
+    this.socketHandlers.onPlayerMoved = ({ id, pos, anim }) => {
+      if (!this.scene.isActive()) return;
       const playerContainer = this.players[id];
       if (playerContainer) {
         this.tweens.add({
@@ -190,15 +200,22 @@ export default class WorldScene extends Phaser.Scene {
         const playerSprite = playerContainer.getAt(0);
         if (anim && playerSprite.anims) playerSprite.anims.play(anim, true);
       }
-    });
+    };
+    socketService.onPlayerMoved(this.socketHandlers.onPlayerMoved);
 
-    socketService.onPlayerLeft((id) => {
+    this.socketHandlers.onPlayerLeft = (id) => {
+      if (!this.scene.isActive()) return;
       if (this.players[id]) {
         this.players[id].destroy();
         delete this.players[id];
-        this.playerUsernames.delete(id); // <-- REMOVE from map
+        this.playerUsernames.delete(id);
       }
-    });
+    };
+    socketService.onPlayerLeft(this.socketHandlers.onPlayerLeft);
+
+    // Register cleanup on scene shutdown
+    this.events.on('shutdown', this.cleanupSocketListeners, this);
+    this.events.on('destroy', this.cleanupSocketListeners, this);
 
     // Movement state + network throttling
     this.movement = { up: false, down: false, left: false, right: false };
@@ -267,7 +284,8 @@ export default class WorldScene extends Phaser.Scene {
   setupProximityCallHandlers() {
     console.log("🎯 Setting up proximity call handlers");
 
-    socketService.onInitiateProximityCalls((data) => {
+    this.socketHandlers.onInitiateProximityCalls = (data) => {
+      if (!this.scene.isActive()) return;
       const newNearbyIds = new Set(data.nearbyPlayers.map((p) => p.id));
 
       // End calls that are no longer nearby (with Grace Period)
@@ -315,11 +333,26 @@ export default class WorldScene extends Phaser.Scene {
           }
         }
       });
-    });
+    };
+    socketService.onInitiateProximityCalls(this.socketHandlers.onInitiateProximityCalls);
 
-    socketService.onPlayerInProximity((data) => {
+    this.socketHandlers.onPlayerInProximity = (data) => {
       // console.log("👥 In proximity of:", data.username, "Distance:", data.distance); 
-    });
+    };
+    socketService.onPlayerInProximity(this.socketHandlers.onPlayerInProximity);
+  }
+
+  cleanupSocketListeners() {
+    console.log("🧹 Cleaning up socket listeners...");
+    if (this.socketHandlers.onPlayers) socketService.off("players", this.socketHandlers.onPlayers);
+    if (this.socketHandlers.onGameRules) socketService.off("gameRules", this.socketHandlers.onGameRules);
+    if (this.socketHandlers.onPlayerJoined) socketService.off("playerJoined", this.socketHandlers.onPlayerJoined);
+    if (this.socketHandlers.onPlayerMoved) socketService.off("playerMoved", this.socketHandlers.onPlayerMoved);
+    if (this.socketHandlers.onPlayerLeft) socketService.off("playerLeft", this.socketHandlers.onPlayerLeft);
+    if (this.socketHandlers.onInitiateProximityCalls) socketService.off("initiateProximityCalls", this.socketHandlers.onInitiateProximityCalls);
+    if (this.socketHandlers.onPlayerInProximity) socketService.off("playerInProximity", this.socketHandlers.onPlayerInProximity);
+
+    this.socketHandlers = {};
   }
 
   handleRemoteStream(peerId, stream) {

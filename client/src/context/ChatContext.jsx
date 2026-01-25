@@ -48,16 +48,25 @@ export const ChatProvider = ({ children }) => {
 
                 const data = await response.json();
 
+                // Robust ID selection:
+                // Login returns 'userId', Update Profile returns '_id'. We must handle both.
+                // Fallback to username only if absolutely necessary, but mismatch will cause error.
+                const streamRole = user.role === 'admin' ? 'admin' : 'user';
+                const streamDetails = {
+                    id: user.userId || user._id || user.id, // <--- CHANGED: Prioritize ID
+                    name: user.username,
+                    role: streamRole,
+                    metaverse_role: user.role,
+                    image: user.avatar // optional
+                };
+
                 // Connect the user to Stream
-                await client.connectUser(
-                    { id: user.username, name: user.username, role: user.role },
-                    data.token
-                );
+                await client.connectUser(streamDetails, data.token);
 
                 if (didAbort) return;
 
                 // Get and watch the main channel
-                const mainChannel = client.channel("messaging", "metaverse-room", { name: "Metaverse Lobby" });
+                const mainChannel = client.channel("messaging", "global-lobby", { name: "Global Lobby" });
                 await mainChannel.watch();
 
                 setChatClient(client);
@@ -68,7 +77,7 @@ export const ChatProvider = ({ children }) => {
                     // Ignore own messages
                     if (event.user.id === client.userID) return;
 
-                    if (event.channel_id === 'metaverse-room') {
+                    if (event.channel_id === 'global-lobby') {
                         setUnreadCounts(prev => ({ ...prev, world: prev.world + 1 }));
                     } else {
                         setUnreadCounts(prev => ({ ...prev, private: prev.private + 1 }));
