@@ -3,16 +3,19 @@
 import { useState } from 'react'
 import { useChat } from '../context/ChatContext'
 import { useAuth } from '../context/AuthContext'
+import { ShieldCheck } from 'lucide-react'
 import WorldChat from './WorldChat'
 import PrivateChatManager from './PrivateChatManager'
 import UserSettingsModal from './UserSettingsModal'
+import AdminPanel from './AdminPanel'
 
 export default function Sidebar() {
   const { chatClient, channel, isConnecting, unreadCounts, markAsRead } = useChat()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
 
   const [activePanel, setActivePanel] = useState(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isAdminOpen, setIsAdminOpen] = useState(false)
 
   const togglePanel = (panelName) => {
     const newPanel = activePanel === panelName ? null : panelName
@@ -80,6 +83,17 @@ export default function Sidebar() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </RoundedIconButton>
+
+          {/* ADMIN — Only visible to admins */}
+          {user?.role === 'admin' && (
+            <RoundedIconButton
+              active={isAdminOpen}
+              title="Admin Panel"
+              onClick={() => setIsAdminOpen(true)}
+            >
+              <ShieldCheck size={24} />
+            </RoundedIconButton>
+          )}
         </div>
 
         <RoundedIconButton title="Logout" onClick={logout}>
@@ -116,6 +130,12 @@ export default function Sidebar() {
       <UserSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Admin Panel */}
+      <AdminPanel
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
       />
     </>
   )

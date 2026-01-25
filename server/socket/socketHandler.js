@@ -1,5 +1,6 @@
 // server/socket/socketHandler.js
 import User from "../models/User.js";
+import { ROOM_ACCESS_LEVELS } from "../config/roles.js";
 
 export default (io) => {
   // id -> player state
@@ -16,6 +17,9 @@ export default (io) => {
           console.error(`User '${username}' not found in database.`);
           return;
         }
+
+        // Get role from user (default to employee if missing)
+        const userRole = user.role || 'employee';
 
         // If user already has an active session, force old session to logout
         if (user.activeSocketId && user.activeSocketId !== socket.id) {
@@ -59,10 +63,16 @@ export default (io) => {
           peerId: null,
           videoEnabled: false, // Default to video off
           nearbyPlayers: [],
+          role: userRole,
         };
 
         // Send full state to the new player
         socket.emit("players", players);
+
+        // Send game configuration (room access rules)
+        socket.emit("gameRules", {
+          roomAccess: ROOM_ACCESS_LEVELS
+        });
 
         // Announce to others
         socket.broadcast.emit("playerJoined", {

@@ -21,6 +21,11 @@ export default class WorldScene extends Phaser.Scene {
 
     // Disconnect grace period timers
     this.disconnectTimers = new Map();
+
+    // 🔒 RBAC State
+    this.myRole = 'employee'; // default
+    this.roomAccessRules = {};
+    this.restrictedZones = []; // { id, x, y, width, height, name }
   }
 
   init(data) {
@@ -116,6 +121,9 @@ export default class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // 🔒 Initialize RBAC Zones
+    this.createRestrictedZones();
+
     this.player.setDepth(5);
     this.playerUsernameText.setDepth(6);
     this.physics.add.collider(this.player, wallsLayer);
@@ -144,8 +152,25 @@ export default class WorldScene extends Phaser.Scene {
     socketService.onPlayers((players) => {
       Object.keys(players).forEach((id) => {
         const myId = socketService.socket?.id;
-        if (id !== myId) this.addOtherPlayer(id, players[id]);
+        if (id !== myId) {
+          this.addOtherPlayer(id, players[id]);
+        } else {
+          // It's me! Update my role
+          if (players[id].role) {
+            this.myRole = players[id].role;
+            console.log("👮 My Role is:", this.myRole);
+            this.updateZoneVisuals(); // Update visuals based on new role
+          }
+        }
       });
+    });
+
+    socketService.onGameRules((rules) => {
+      console.log("📜 Received Game Rules:", rules);
+      if (rules.roomAccess) {
+        this.roomAccessRules = rules.roomAccess;
+        this.updateZoneVisuals();
+      }
     });
 
     socketService.onPlayerJoined((playerData) =>
@@ -732,6 +757,118 @@ export default class WorldScene extends Phaser.Scene {
     }
   }
 
+  // 🔒 RBAC HELPER METHODS
+  createRestrictedZones() {
+    // Define zones manually (conceptually could come from Map Object Layer)
+    // Server Room (Admin only) - Left side Example
+    this.restrictedZones.push({
+      id: 'server_room',
+      name: 'Server Room',
+      x: 950, y: 1050, width: 100, height: 100
+    });
+
+    // CEO Office (CEO, Admin) - Right side Example
+    this.restrictedZones.push({
+      id: 'ceo_office',
+      name: 'CEO Office',
+      x: 1300, y: 1050, width: 100, height: 100
+    });
+
+    // Draw them
+    this.zoneGraphics = this.add.graphics();
+    this.zoneGraphics.setDepth(0); // On ground
+    this.updateZoneVisuals();
+
+    // Create text labels for zones
+    this.restrictedZones.forEach(zone => {
+      const text = this.add.text(zone.x + zone.width / 2, zone.y - 10, zone.name, {
+        fontSize: '12px', fill: '#ffffff', backgroundColor: '#000000aa'
+      }).setOrigin(0.5);
+      text.setDepth(10);
+    });
+  }
+
+  updateZoneVisuals() {
+    if (!this.zoneGraphics) return;
+    this.zoneGraphics.clear();
+
+    this.restrictedZones.forEach(zone => {
+      const allowedRoles = this.roomAccessRules[zone.id] || [];
+      const canAccess = allowedRoles.includes(this.myRole);
+
+      const color = canAccess ? 0x00ff00 : 0xff0000;
+      const alpha = 0.3;
+
+      this.zoneGraphics.fillStyle(color, alpha);
+      this.zoneGraphics.fillRect(zone.x, zone.y, zone.width, zone.height);
+
+      // Border
+      this.zoneGraphics.lineStyle(2, color, 1);
+      this.zoneGraphics.strokeRect(zone.x, zone.y, zone.width, zone.height);
+    });
+  }
+
+  checkZoneAccess() {
+    if (!this.player) return;
+
+    // Predict next position
+    // (Simplified: just check current position. If inside restricted, push back)
+
+    const px = this.player.x;
+    const py = this.player.y;
+
+    this.restrictedZones.forEach(zone => {
+      const inZone = (px > zone.x && px < zone.x + zone.width &&
+        py > zone.y && py < zone.y + zone.height);
+
+      if (inZone) {
+        const allowedRoles = this.roomAccessRules[zone.id] || [];
+        const canAccess = allowedRoles.includes(this.myRole);
+
+        if (!canAccess) {
+          // Access Denied! Bounce back.
+          // Simple bounce: find center of zone and push away
+          const centerX = zone.x + zone.width / 2;
+          const centerY = zone.y + zone.height / 2;
+          const angle = Phaser.Math.Angle.Between(centerX, centerY, px, py);
+
+          // Push player out
+          const pushDist = 5;
+          this.player.x += Math.cos(angle) * pushDist;
+          this.player.y += Math.sin(angle) * pushDist;
+
+          // Optional: Show warning (debounced)
+          if (!this.lastAccessDeniedWarning || Date.now() - this.lastAccessDeniedWarning > 1000) {
+            this.showAccessDeniedWarning(zone.name);
+            this.lastAccessDeniedWarning = Date.now();
+          }
+        }
+      }
+    });
+  }
+
+  showAccessDeniedWarning(zoneName) {
+    if (!this.scene.isActive()) return;
+
+    const toast = this.add.text(this.player.x, this.player.y - 60, `🔒 Access to ${zoneName} Denied`, {
+      fontSize: '16px',
+      fontStyle: 'bold',
+      fill: '#ff0000',
+      stroke: '#ffffff',
+      strokeThickness: 4,
+      backgroundColor: '#00000088',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5).setDepth(100);
+
+    this.tweens.add({
+      targets: toast,
+      y: toast.y - 50,
+      alpha: 0,
+      duration: 1500,
+      onComplete: () => toast.destroy()
+    });
+  }
+
   handleInteraction() {
     console.log("Player interaction");
   }
@@ -776,6 +913,9 @@ export default class WorldScene extends Phaser.Scene {
       }
       return;
     }
+
+    // 🔒 RESTRICTED ZONE ENFORCEMENT
+    this.checkZoneAccess();
 
     // Movement
     const speed = 200;

@@ -90,6 +90,10 @@ const socketService = {
     socket?.on("playerVideoStatus", callback);
   },
 
+  onGameRules(callback) {
+    socket?.on("gameRules", callback);
+  },
+
   removeAllListeners() {
     socket?.removeAllListeners();
   }
