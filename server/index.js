@@ -18,6 +18,7 @@ import socketHandler from "./socket/socketHandler.js";
 import authRoutes from "./api/auth.js";
 import streamApiRoutes from "./api/stream.js";
 import usersRoute from "./routes/users.js";
+import meetingRoutes from "./routes/meeting.js";
 
 const app = express();
 app.use(cors());
@@ -59,6 +60,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use("/api/auth", authRoutes);        // Authentication routes (signup/login)
 app.use("/api/stream", streamApiRoutes); // Stream Chat related routes
 app.use("/api/users", usersRoute);       // Users routes
+app.use("/api/meeting", meetingRoutes);
 
 // --- Socket.IO Connection Handling ---
 socketHandler(io);
