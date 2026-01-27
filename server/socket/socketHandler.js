@@ -1,5 +1,6 @@
 // server/socket/socketHandler.js
 import User from "../models/User.js";
+import { ROOM_ACCESS_LEVELS } from "../config/roles.js";
 
 export default (io) => {
   // id -> player state
@@ -16,6 +17,9 @@ export default (io) => {
           console.error(`User '${username}' not found in database.`);
           return;
         }
+
+        // Get role from user (default to employee if missing)
+        const userRole = user.role || 'employee';
 
         // If user already has an active session, force old session to logout
         if (user.activeSocketId && user.activeSocketId !== socket.id) {
@@ -34,6 +38,12 @@ export default (io) => {
           // 🔴 Immediately clean up old player on the server
           const oldPlayer = players[oldSocketId];
           if (oldPlayer) {
+            // Transfer position to current user object so new session uses it
+            if (oldPlayer.x !== undefined && oldPlayer.y !== undefined) {
+              user.lastX = oldPlayer.x;
+              user.lastY = oldPlayer.y;
+            }
+
             delete players[oldSocketId];
             io.emit("playerLeft", oldSocketId);
           }
@@ -51,18 +61,31 @@ export default (io) => {
 
         console.log(`${username} joined with socket: ${socket.id}`);
 
+        // Check if player exists on this socket to preserve position
+        const existingPlayer = players[socket.id];
+
+        // Use existing (hot-reload) OR saved (db) OR default
+        const startX = existingPlayer ? existingPlayer.x : (user.lastX || 1162);
+        const startY = existingPlayer ? existingPlayer.y : (user.lastY || 1199);
+
         players[socket.id] = {
           username,
-          x: 1162,
-          y: 1199,
-          anim: "idle-down",
-          peerId: null,
-          videoEnabled: false, // Default to video off
+          x: startX,
+          y: startY,
+          anim: existingPlayer ? existingPlayer.anim : "idle-down",
+          peerId: existingPlayer ? existingPlayer.peerId : null,
+          videoEnabled: existingPlayer ? existingPlayer.videoEnabled : false,
           nearbyPlayers: [],
+          role: userRole,
         };
 
         // Send full state to the new player
         socket.emit("players", players);
+
+        // Send game configuration (room access rules)
+        socket.emit("gameRules", {
+          roomAccess: ROOM_ACCESS_LEVELS
+        });
 
         // Announce to others
         socket.broadcast.emit("playerJoined", {
@@ -155,6 +178,14 @@ export default (io) => {
         const user = await User.findOne({ activeSocketId: socket.id });
         if (user) {
           user.activeSocketId = null;
+
+          // Save last position
+          if (p && p.x !== undefined && p.y !== undefined) {
+            user.lastX = p.x;
+            user.lastY = p.y;
+            console.log(`Saving position for ${p.username}: ${p.x}, ${p.y}`);
+          }
+
           await user.save();
           console.log(`Cleared active session for ${user.username}`);
         }

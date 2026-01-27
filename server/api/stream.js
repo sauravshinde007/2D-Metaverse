@@ -12,25 +12,33 @@ const serverClient = StreamChat.getInstance(streamApiKey, streamApiSecret);
 
 router.get("/get-token", authMiddleware, async (req, res) => {
     try {
-        const { username } = req.userData; // Get username from decoded JWT
+        const { userId, username, role } = req.userData; // userId is immutable
 
-        // ✅ BEST PRACTICE: Ensure the user exists on Stream before creating a token.
-        // This prevents authentication issues on the client-side.
-        // 'upsertUser' will create the user if they don't exist, or update them if they do.
+        // ✅ Robustness Fix: Use userId (MongoID) as the Stream Chat ID.
+        // This ensures that even if username changes, the chat identity/history remains.
+
+        // ✅ Robustness Fix: Map internal roles to Stream valid roles ('admin' or 'user')
+        // Stream Chat validates 'role' against its configured roles. 'employee', 'hr', 'ceo' are likely not defined.
+        const streamRole = role === 'admin' ? 'admin' : 'user';
+
         await serverClient.upsertUser({
-            id: username,   // The ID must match the ID you use on the client
-            name: username, // This is the display name in chat
-            // You can add other fields here, like 'role' or 'image'
+            id: userId,
+            name: username,
+            role: streamRole,       // 'admin' or 'user'
+            metaverse_role: role    // Store real role in custom field
         });
 
-        const token = serverClient.createToken(username);
+        const token = serverClient.createToken(userId); // <--- CHANGED
 
-        // This logic is fine, it ensures the channel exists and the user is a member.
-        const channel = serverClient.channel("messaging", "metaverse-room", {
-            name: "Metaverse Lobby",
+        // Connect to a fresh channel to avoid conflicts with legacy username-based members
+        const channel = serverClient.channel("messaging", "global-lobby", {
+            name: "Global Lobby",
+            created_by_id: userId, // <--- REQUIRED: Specify who is creating/accessing this channel since we are using server-side auth
         });
         await channel.create();
-        await channel.addMembers([username]);
+
+        // Add member using the UserID
+        await channel.addMembers([userId]); // <--- CHANGED
 
         res.json({ token });
     } catch (error) {

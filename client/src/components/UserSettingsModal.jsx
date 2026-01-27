@@ -7,17 +7,19 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
     const { user, token, setUser } = useAuth();
     const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
     const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
 
-    // Pre-fill email if exists (but likely it's null for legacy users)
+    // Pre-fill fields
     useEffect(() => {
-        if (user?.email) {
-            setEmail(user.email);
+        if (user) {
+            setEmail(user.email || "");
+            setUsername(user.username || "");
         }
-    }, [user]);
+    }, [user, isOpen]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -27,25 +29,26 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
         try {
             const response = await axios.put(
-                `${serverUrl}/api/users/update-email`,
-                { email },
+                `${serverUrl}/api/users/update-profile`,
+                { email, username },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             // Update local user state
-            setUser({ ...user, email: response.data.email });
-            localStorage.setItem("user", JSON.stringify({ ...user, email: response.data.email }));
+            const updatedUser = { ...user, ...response.data.user };
+            setUser(updatedUser);
+            localStorage.setItem("user", JSON.stringify(updatedUser));
 
-            setMessage("Email updated/added successfully!");
+            setMessage("Profile updated successfully!");
 
             // Close after short delay
             setTimeout(() => {
-                onClose(); // Parent might need to know
-            }, 1500);
+                onClose();
+            }, 1000);
 
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || "Failed to update email.");
+            setError(err.response?.data?.message || "Failed to update profile.");
         } finally {
             setLoading(false);
         }
@@ -55,17 +58,27 @@ export default function UserSettingsModal({ isOpen, onClose }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="w-full max-w-sm rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-white">Account Settings</h2>
+                    <h2 className="text-xl font-bold text-white">Profile Settings</h2>
                     <button onClick={onClose} className="text-zinc-400 hover:text-white">&times;</button>
                 </div>
 
-                <p className="text-sm text-zinc-400 mb-6">
-                    {user?.email
-                        ? "Update your email address to ensure you can recover your account."
-                        : "⚠️ Your account has no email! Add one now to enable password recovery."}
-                </p>
-
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Username Input */}
+                    <div>
+                        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400 mb-1">
+                            Username
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 outline-none focus:ring-1 focus:ring-[#9b99fe]"
+                            placeholder="username"
+                        />
+                    </div>
+
+                    {/* Email Input */}
                     <div>
                         <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400 mb-1">
                             Email Address
@@ -88,7 +101,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                         disabled={loading}
                         className="w-full rounded-md bg-[#9b99fe] px-4 py-2 text-sm font-semibold text-black hover:bg-[#8886fc] disabled:opacity-50"
                     >
-                        {loading ? "Saving..." : "Save Email"}
+                        {loading ? "Saving..." : "Save Changes"}
                     </button>
                 </form>
             </div>

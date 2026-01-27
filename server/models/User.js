@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema({
   },
   activeSocketId: { type: String, default: null },
   resetPasswordToken: { type: String, default: null },
-  resetPasswordExpires: { type: Date, default: null }
+  resetPasswordExpires: { type: Date, default: null },
+  lastX: { type: Number, default: 1162 },
+  lastY: { type: Number, default: 1199 }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);

@@ -21,6 +21,14 @@ export default class WorldScene extends Phaser.Scene {
 
     // Disconnect grace period timers
     this.disconnectTimers = new Map();
+
+    // 🔒 RBAC State
+    this.myRole = 'employee'; // default
+    this.roomAccessRules = {};
+    this.restrictedZones = []; // { id, x, y, width, height, name }
+
+    // 🔌 Socket Listener References (for cleanup)
+    this.socketHandlers = {};
   }
 
   init(data) {
@@ -116,6 +124,9 @@ export default class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // 🔒 Initialize RBAC Zones
+    this.createRestrictedZones(map);
+
     this.player.setDepth(5);
     this.playerUsernameText.setDepth(6);
     this.physics.add.collider(this.player, wallsLayer);
@@ -141,18 +152,51 @@ export default class WorldScene extends Phaser.Scene {
     this.createMobileJoystick(); // 🔵 Create mobile joysticsk
 
     // Socket event wiring
-    socketService.onPlayers((players) => {
+    // Store handlers so we can remove them later
+    this.socketHandlers.onPlayers = (players) => {
+      if (!this.scene.isActive()) return;
       Object.keys(players).forEach((id) => {
         const myId = socketService.socket?.id;
-        if (id !== myId) this.addOtherPlayer(id, players[id]);
+        if (id !== myId) {
+          this.addOtherPlayer(id, players[id]);
+        } else {
+          // Sync my own position from server truth to prevent overwriting it with default spawn
+          if (players[id].x !== undefined && players[id].y !== undefined) {
+            this.player.setPosition(players[id].x, players[id].y);
+            // Also update the username text position immediately
+            if (this.playerUsernameText) {
+              this.playerUsernameText.setPosition(players[id].x, players[id].y - 30);
+            }
+          }
+
+          if (players[id].role) {
+            this.myRole = players[id].role;
+            console.log("👮 My Role is:", this.myRole);
+            this.updateZoneVisuals();
+          }
+        }
       });
-    });
+    };
+    socketService.onPlayers(this.socketHandlers.onPlayers);
 
-    socketService.onPlayerJoined((playerData) =>
-      this.addOtherPlayer(playerData.id, playerData)
-    );
+    this.socketHandlers.onGameRules = (rules) => {
+      if (!this.scene.isActive()) return;
+      console.log("📜 Received Game Rules:", rules);
+      if (rules.roomAccess) {
+        this.roomAccessRules = rules.roomAccess;
+        this.updateZoneVisuals();
+      }
+    };
+    socketService.onGameRules(this.socketHandlers.onGameRules);
 
-    socketService.onPlayerMoved(({ id, pos, anim }) => {
+    this.socketHandlers.onPlayerJoined = (playerData) => {
+      if (!this.scene.isActive()) return;
+      this.addOtherPlayer(playerData.id, playerData);
+    };
+    socketService.onPlayerJoined(this.socketHandlers.onPlayerJoined);
+
+    this.socketHandlers.onPlayerMoved = ({ id, pos, anim }) => {
+      if (!this.scene.isActive()) return;
       const playerContainer = this.players[id];
       if (playerContainer) {
         this.tweens.add({
@@ -165,15 +209,22 @@ export default class WorldScene extends Phaser.Scene {
         const playerSprite = playerContainer.getAt(0);
         if (anim && playerSprite.anims) playerSprite.anims.play(anim, true);
       }
-    });
+    };
+    socketService.onPlayerMoved(this.socketHandlers.onPlayerMoved);
 
-    socketService.onPlayerLeft((id) => {
+    this.socketHandlers.onPlayerLeft = (id) => {
+      if (!this.scene.isActive()) return;
       if (this.players[id]) {
         this.players[id].destroy();
         delete this.players[id];
-        this.playerUsernames.delete(id); // <-- REMOVE from map
+        this.playerUsernames.delete(id);
       }
-    });
+    };
+    socketService.onPlayerLeft(this.socketHandlers.onPlayerLeft);
+
+    // Register cleanup on scene shutdown
+    this.events.on('shutdown', this.cleanupSocketListeners, this);
+    this.events.on('destroy', this.cleanupSocketListeners, this);
 
     // Movement state + network throttling
     this.movement = { up: false, down: false, left: false, right: false };
@@ -242,7 +293,8 @@ export default class WorldScene extends Phaser.Scene {
   setupProximityCallHandlers() {
     console.log("🎯 Setting up proximity call handlers");
 
-    socketService.onInitiateProximityCalls((data) => {
+    this.socketHandlers.onInitiateProximityCalls = (data) => {
+      if (!this.scene.isActive()) return;
       const newNearbyIds = new Set(data.nearbyPlayers.map((p) => p.id));
 
       // End calls that are no longer nearby (with Grace Period)
@@ -290,11 +342,26 @@ export default class WorldScene extends Phaser.Scene {
           }
         }
       });
-    });
+    };
+    socketService.onInitiateProximityCalls(this.socketHandlers.onInitiateProximityCalls);
 
-    socketService.onPlayerInProximity((data) => {
+    this.socketHandlers.onPlayerInProximity = (data) => {
       // console.log("👥 In proximity of:", data.username, "Distance:", data.distance); 
-    });
+    };
+    socketService.onPlayerInProximity(this.socketHandlers.onPlayerInProximity);
+  }
+
+  cleanupSocketListeners() {
+    console.log("🧹 Cleaning up socket listeners...");
+    if (this.socketHandlers.onPlayers) socketService.off("players", this.socketHandlers.onPlayers);
+    if (this.socketHandlers.onGameRules) socketService.off("gameRules", this.socketHandlers.onGameRules);
+    if (this.socketHandlers.onPlayerJoined) socketService.off("playerJoined", this.socketHandlers.onPlayerJoined);
+    if (this.socketHandlers.onPlayerMoved) socketService.off("playerMoved", this.socketHandlers.onPlayerMoved);
+    if (this.socketHandlers.onPlayerLeft) socketService.off("playerLeft", this.socketHandlers.onPlayerLeft);
+    if (this.socketHandlers.onInitiateProximityCalls) socketService.off("initiateProximityCalls", this.socketHandlers.onInitiateProximityCalls);
+    if (this.socketHandlers.onPlayerInProximity) socketService.off("playerInProximity", this.socketHandlers.onPlayerInProximity);
+
+    this.socketHandlers = {};
   }
 
   handleRemoteStream(peerId, stream) {
@@ -732,11 +799,144 @@ export default class WorldScene extends Phaser.Scene {
     }
   }
 
+  // 🔒 RBAC HELPER METHODS
+  createRestrictedZones(map) {
+    // 1. Try to load from Tiled Map Object Layer
+    const zoneLayer = map ? map.getObjectLayer("Zones") : null;
+    this.restrictedZones = []; // Reset
+
+    if (zoneLayer && zoneLayer.objects) {
+      console.log("🗺️ Loading Restricted Zones from Tiled Map...");
+
+      zoneLayer.objects.forEach((obj) => {
+        // Tiled objects usually have properties array. We look for 'zoneId' custom property.
+        // If not found, fall back to object name.
+        const idProp = obj.properties && obj.properties.find(p => p.name === "zoneId");
+        const zoneId = idProp ? idProp.value : obj.name;
+
+        // Also look for a 'name' property for display, or use the object name
+        const nameProp = obj.properties && obj.properties.find(p => p.name === "zoneName"); // Optional custom prop
+        const zoneName = nameProp ? nameProp.value : (obj.name || zoneId);
+
+        // Phaser Tiled object Y is usually bottom-left for some types, top-left for rects.
+        // We assume simple rectangles from Tiled.
+        this.restrictedZones.push({
+          id: zoneId,
+          x: obj.x,
+          y: obj.y,
+          width: obj.width,
+          height: obj.height,
+          name: zoneName, // Display name
+        });
+      });
+      console.log("✅ Loaded Zones:", this.restrictedZones);
+    }
+
+    // Draw them
+    this.zoneGraphics = this.add.graphics();
+    this.zoneGraphics.setDepth(0); // On ground
+    this.updateZoneVisuals();
+
+    // Create text labels for zones
+    this.restrictedZones.forEach(zone => {
+      const text = this.add.text(zone.x + zone.width / 2, zone.y - 10, zone.name, {
+        fontSize: '12px', fill: '#ffffff', backgroundColor: '#000000aa'
+      }).setOrigin(0.5);
+      text.setDepth(10);
+    });
+  }
+
+  updateZoneVisuals() {
+    if (!this.zoneGraphics) return;
+    this.zoneGraphics.clear();
+
+    this.restrictedZones.forEach(zone => {
+      const allowedRoles = this.roomAccessRules[zone.id] || [];
+      const canAccess = allowedRoles.includes(this.myRole);
+
+      const color = canAccess ? 0x00ff00 : 0xff0000;
+      const alpha = 0.3;
+
+      this.zoneGraphics.fillStyle(color, alpha);
+      this.zoneGraphics.fillRect(zone.x, zone.y, zone.width, zone.height);
+
+      // Border
+      this.zoneGraphics.lineStyle(2, color, 1);
+      this.zoneGraphics.strokeRect(zone.x, zone.y, zone.width, zone.height);
+    });
+  }
+
+  checkZoneAccess() {
+    if (!this.player) return;
+
+    // Predict next position
+    // (Simplified: just check current position. If inside restricted, push back)
+
+    const px = this.player.x;
+    const py = this.player.y;
+
+    this.restrictedZones.forEach(zone => {
+      const inZone = (px > zone.x && px < zone.x + zone.width &&
+        py > zone.y && py < zone.y + zone.height);
+
+      if (inZone) {
+        const allowedRoles = this.roomAccessRules[zone.id] || [];
+        const canAccess = allowedRoles.includes(this.myRole);
+
+        if (!canAccess) {
+          // Access Denied! Bounce back.
+          // Simple bounce: find center of zone and push away
+          const centerX = zone.x + zone.width / 2;
+          const centerY = zone.y + zone.height / 2;
+          const angle = Phaser.Math.Angle.Between(centerX, centerY, px, py);
+
+          // Push player out
+          const pushDist = 5;
+          this.player.x += Math.cos(angle) * pushDist;
+          this.player.y += Math.sin(angle) * pushDist;
+
+          // Optional: Show warning (debounced)
+          if (!this.lastAccessDeniedWarning || Date.now() - this.lastAccessDeniedWarning > 1000) {
+            this.showAccessDeniedWarning(zone.name);
+            this.lastAccessDeniedWarning = Date.now();
+          }
+        }
+      }
+    });
+  }
+
+  showAccessDeniedWarning(zoneName) {
+    if (!this.scene.isActive()) return;
+
+    const toast = this.add.text(this.player.x, this.player.y - 60, `🔒 Access to ${zoneName} Denied`, {
+      fontSize: '16px',
+      fontStyle: 'bold',
+      fill: '#ff0000',
+      stroke: '#ffffff',
+      strokeThickness: 4,
+      backgroundColor: '#00000088',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5).setDepth(100);
+
+    this.tweens.add({
+      targets: toast,
+      y: toast.y - 50,
+      alpha: 0,
+      duration: 1500,
+      onComplete: () => toast.destroy()
+    });
+  }
+
   handleInteraction() {
     console.log("Player interaction");
   }
 
   addOtherPlayer(id, data) {
+    // Prevent duplicates/ghosts
+    if (this.players[id]) {
+      this.players[id].destroy();
+    }
+
     const otherPlayerSprite = this.add.sprite(0, 0, "ash");
     const usernameText = this.add
       .text(0, -30, data.username, {
@@ -776,6 +976,9 @@ export default class WorldScene extends Phaser.Scene {
       }
       return;
     }
+
+    // 🔒 RESTRICTED ZONE ENFORCEMENT
+    this.checkZoneAccess();
 
     // Movement
     const speed = 200;

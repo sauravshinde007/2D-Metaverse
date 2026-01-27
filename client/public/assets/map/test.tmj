@@ -256,9 +256,48 @@
          "width":40,
          "x":0,
          "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":8,
+         "name":"Zones",
+         "objects":[
+                {
+                 "height":254.646945289882,
+                 "id":1,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"zoneId",
+                         "type":"string",
+                         "value":"ceo_office"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":445.887833123005,
+                 "x":801.860144013065,
+                 "y":127.723851235988
+                }, 
+                {
+                 "height":0,
+                 "id":2,
+                 "name":"",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":492.198055081286,
+                 "y":444.6885903051
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
         }],
- "nextlayerid":8,
- "nextobjectid":1,
+ "nextlayerid":9,
+ "nextobjectid":4,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

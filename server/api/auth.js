@@ -39,7 +39,13 @@ router.post("/signup", async (req, res) => {
         await newUser.save();
 
         // Also create the user in Stream Chat
-        await serverClient.upsertUser({ id: username, name: username, role });
+        const streamRole = role === 'admin' ? 'admin' : 'user';
+        await serverClient.upsertUser({
+            id: newUser.id, // <--- CHANGED: Use MongoID
+            name: username,
+            role: streamRole,
+            metaverse_role: role
+        });
 
         const token = jwt.sign({ userId: newUser.id, username: newUser.username, role: newUser.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.status(201).json({ token, userId: newUser.id, username: newUser.username, role: newUser.role, email: newUser.email });
