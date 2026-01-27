@@ -125,7 +125,7 @@ export default class WorldScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // 🔒 Initialize RBAC Zones
-    this.createRestrictedZones();
+    this.createRestrictedZones(map);
 
     this.player.setDepth(5);
     this.playerUsernameText.setDepth(6);
@@ -800,21 +800,37 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   // 🔒 RBAC HELPER METHODS
-  createRestrictedZones() {
-    // Define zones manually (conceptually could come from Map Object Layer)
-    // Server Room (Admin only) - Left side Example
-    this.restrictedZones.push({
-      id: 'server_room',
-      name: 'Server Room',
-      x: 950, y: 1050, width: 100, height: 100
-    });
+  createRestrictedZones(map) {
+    // 1. Try to load from Tiled Map Object Layer
+    const zoneLayer = map ? map.getObjectLayer("Zones") : null;
+    this.restrictedZones = []; // Reset
 
-    // CEO Office (CEO, Admin) - Right side Example
-    this.restrictedZones.push({
-      id: 'ceo_office',
-      name: 'CEO Office',
-      x: 1300, y: 1050, width: 100, height: 100
-    });
+    if (zoneLayer && zoneLayer.objects) {
+      console.log("🗺️ Loading Restricted Zones from Tiled Map...");
+
+      zoneLayer.objects.forEach((obj) => {
+        // Tiled objects usually have properties array. We look for 'zoneId' custom property.
+        // If not found, fall back to object name.
+        const idProp = obj.properties && obj.properties.find(p => p.name === "zoneId");
+        const zoneId = idProp ? idProp.value : obj.name;
+
+        // Also look for a 'name' property for display, or use the object name
+        const nameProp = obj.properties && obj.properties.find(p => p.name === "zoneName"); // Optional custom prop
+        const zoneName = nameProp ? nameProp.value : (obj.name || zoneId);
+
+        // Phaser Tiled object Y is usually bottom-left for some types, top-left for rects.
+        // We assume simple rectangles from Tiled.
+        this.restrictedZones.push({
+          id: zoneId,
+          x: obj.x,
+          y: obj.y,
+          width: obj.width,
+          height: obj.height,
+          name: zoneName, // Display name
+        });
+      });
+      console.log("✅ Loaded Zones:", this.restrictedZones);
+    }
 
     // Draw them
     this.zoneGraphics = this.add.graphics();
