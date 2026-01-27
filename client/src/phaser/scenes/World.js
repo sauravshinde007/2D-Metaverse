@@ -160,6 +160,15 @@ export default class WorldScene extends Phaser.Scene {
         if (id !== myId) {
           this.addOtherPlayer(id, players[id]);
         } else {
+          // Sync my own position from server truth to prevent overwriting it with default spawn
+          if (players[id].x !== undefined && players[id].y !== undefined) {
+            this.player.setPosition(players[id].x, players[id].y);
+            // Also update the username text position immediately
+            if (this.playerUsernameText) {
+              this.playerUsernameText.setPosition(players[id].x, players[id].y - 30);
+            }
+          }
+
           if (players[id].role) {
             this.myRole = players[id].role;
             console.log("👮 My Role is:", this.myRole);
@@ -907,6 +916,11 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   addOtherPlayer(id, data) {
+    // Prevent duplicates/ghosts
+    if (this.players[id]) {
+      this.players[id].destroy();
+    }
+
     const otherPlayerSprite = this.add.sprite(0, 0, "ash");
     const usernameText = this.add
       .text(0, -30, data.username, {
