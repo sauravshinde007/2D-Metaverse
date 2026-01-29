@@ -64,7 +64,7 @@ router.get('/', jwtAuthMiddleware, async (req, res) => {
         // We must explicitly select both '_id' and 'username'.
         // .select('username') was not sending the _id, which caused the 'key' prop error.
         const users = await User.find({ _id: { $ne: currentUserId } })
-            .select('_id username avatar'); // Now it will send [{ _id: "...", username: "...", avatar: "..." }]
+            .select('_id username avatar role'); // Now it will send [{ _id: "...", username: "...", avatar: "...", role: "..." }]
 
         if (!users) {
             return res.status(404).json({ msg: 'No users found' });

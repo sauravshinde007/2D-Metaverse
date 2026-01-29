@@ -10,8 +10,12 @@ import LocalVideoView from "../components/LocalVideoView"; // <-- 1. Import Loca
 import { ChatProvider } from "../context/ChatContext";
 import { useAuth } from "../context/AuthContext";
 
+import ServerStats from "../components/ServerStats"; // Import
+
+import ZoomControls from "../components/ZoomControls"; // Import
+
 function Metaverse() {
-    const { user } = useAuth(); 
+    const { user } = useAuth();
     // 2. "Lift state up" - Manage video state here
     const [isVideoEnabled, setIsVideoEnabled] = useState(false);
 
@@ -35,13 +39,19 @@ function Metaverse() {
                 <div id="game-container" className="game-container" />
                 {/* 3. Add LocalVideoView, controlled by the state */}
                 <LocalVideoView isVisible={isVideoEnabled} />
-                
+
                 <VideoGrid />
-                
+
+                {/* New Server Stats Widget */}
+                <ServerStats />
+
+                {/* Manual Zoom Controls */}
+                <ZoomControls />
+
                 {/* 4. Pass the state and setter down to the controls */}
-                <VoiceChat 
-                  isVideoEnabled={isVideoEnabled}
-                  setIsVideoEnabled={setIsVideoEnabled}
+                <VoiceChat
+                    isVideoEnabled={isVideoEnabled}
+                    setIsVideoEnabled={setIsVideoEnabled}
                 />
 
                 <Sidebar />

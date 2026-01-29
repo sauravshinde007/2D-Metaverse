@@ -115,7 +115,7 @@ export default class WorldScene extends Phaser.Scene {
     // Local player
     this.player = this.physics.add.sprite(1162, 1199, "ash");
     this.playerUsernameText = this.add
-      .text(this.player.x, this.player.y - 30, this.username, {
+      .text(this.player.x, this.player.y - 30, "You", {
         fontSize: "14px",
         fill: "#90EE90",
         fontStyle: "bold",
@@ -144,6 +144,78 @@ export default class WorldScene extends Phaser.Scene {
       // Desktop / larger screens
       this.cameras.main.setZoom(1.5);
     }
+
+    // 🖱️ Mouse Wheel Zoom
+    this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
+      const zoomAmount = 0.3;
+      let newZoom = this.cameras.main.zoom;
+
+      if (deltaY > 0) {
+        // Scrolled Down -> Zoom Out
+        newZoom -= zoomAmount;
+      } else if (deltaY < 0) {
+        // Scrolled Up -> Zoom In
+        newZoom += zoomAmount;
+      }
+
+      // Clamp Zoom (Min: 0.5x, Max: 3.0x)
+      newZoom = Phaser.Math.Clamp(newZoom, 0.5, 3.0);
+
+      // Apply smooth zoom
+      this.cameras.main.zoomTo(newZoom, 100, 'Linear', true);
+    });
+
+    // ➕ UI Button Zoom Integration
+    window.addEventListener('zoom-in', () => {
+      let newZoom = this.cameras.main.zoom + 0.3;
+      newZoom = Phaser.Math.Clamp(newZoom, 0.5, 3.0);
+      this.cameras.main.zoomTo(newZoom, 200, 'Linear', true);
+    });
+
+    window.addEventListener('zoom-out', () => {
+      let newZoom = this.cameras.main.zoom - 0.3;
+      newZoom = Phaser.Math.Clamp(newZoom, 0.5, 3.0);
+      this.cameras.main.zoomTo(newZoom, 200, 'Linear', true);
+    });
+
+    // ✋ Drag-to-Pan Logic
+    this.isMapDragging = false;
+    this.dragStart = { x: 0, y: 0 };
+    this.isCameraFollowEnabled = true;
+
+    this.input.on('pointerdown', (pointer) => {
+      if (!pointer.isDown) return;
+      this.isMapDragging = true;
+      this.dragStart.x = pointer.x;
+      this.dragStart.y = pointer.y;
+      this.cameras.main.stopFollow();
+      this.isCameraFollowEnabled = false;
+      this.game.canvas.style.cursor = 'grabbing';
+    });
+
+    this.input.on('pointerup', () => {
+      this.isMapDragging = false;
+      this.game.canvas.style.cursor = 'default';
+      // Note: We don't enable follow here immediately, keeping the panned view until movement.
+    });
+
+    this.input.on('pointermove', (pointer) => {
+      if (this.isMapDragging && pointer.isDown) {
+        const cam = this.cameras.main;
+
+        // Calculate delta in screen pixels, adjusted by zoom
+        // We want to move camera OPPOSITE to drag direction
+        const deltaX = (pointer.x - this.dragStart.x) / cam.zoom;
+        const deltaY = (pointer.y - this.dragStart.y) / cam.zoom;
+
+        cam.scrollX -= deltaX;
+        cam.scrollY -= deltaY;
+
+        // Reset start for next frame
+        this.dragStart.x = pointer.x;
+        this.dragStart.y = pointer.y;
+      }
+    });
 
     // Input
     this.inputManager = new InputManager(this);
@@ -989,6 +1061,12 @@ export default class WorldScene extends Phaser.Scene {
     else if (this.movement.right) dx = 1;
     if (this.movement.up) dy = -1;
     else if (this.movement.down) dy = 1;
+
+    // 🚶 Re-enable Camera Follow on Movement
+    if ((dx !== 0 || dy !== 0) && !this.isCameraFollowEnabled) {
+      this.cameras.main.startFollow(this.player);
+      this.isCameraFollowEnabled = true;
+    }
 
     this.player.body.setVelocityX(dx * speed);
     this.player.body.setVelocityY(dy * speed);
