@@ -249,11 +249,21 @@ export default function PrivateChatManager({ onClose }) {
                       onClick={() => startPrivateChat(user)}
                       className="
                         mb-1 cursor-pointer rounded-lg
-                        px-2 py-1.5 text-zinc-200
+                        px-2 py-2 text-zinc-200
                         hover:bg-zinc-800/80
+                        flex items-center gap-3 transition-colors
                       "
                     >
-                      {user.username}
+                      <div className="h-8 w-8 rounded-full overflow-hidden bg-zinc-800 shrink-0 border border-zinc-700/50">
+                        {user.avatar ? (
+                          <img src={user.avatar} alt={user.username} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#9b99fe] to-[#2bc8b7] text-xs font-bold text-zinc-950">
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-medium text-sm truncate">{user.username}</span>
                     </li>
                   ))
                 ) : (

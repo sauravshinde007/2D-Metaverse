@@ -64,7 +64,7 @@ router.get('/', jwtAuthMiddleware, async (req, res) => {
         // We must explicitly select both '_id' and 'username'.
         // .select('username') was not sending the _id, which caused the 'key' prop error.
         const users = await User.find({ _id: { $ne: currentUserId } })
-            .select('_id username'); // Now it will send [{ _id: "...", username: "..." }]
+            .select('_id username avatar'); // Now it will send [{ _id: "...", username: "...", avatar: "..." }]
 
         if (!users) {
             return res.status(404).json({ msg: 'No users found' });
@@ -79,8 +79,13 @@ router.get('/', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Update Email Route
-// Update Profile Route (Email & Username)
-router.put('/update-profile', jwtAuthMiddleware, async (req, res) => {
+// Update Profile Route (Email, Username & Avatar)
+import { upload } from '../config/cloudinary.js';
+
+import { StreamChat } from 'stream-chat';
+const serverClient = StreamChat.getInstance(process.env.STREAM_API_KEY, process.env.STREAM_API_SECRET);
+
+router.put('/update-profile', jwtAuthMiddleware, upload.single('avatar'), async (req, res) => {
     try {
         const { userId } = req.userData;
         const { email, username } = req.body;
@@ -108,7 +113,28 @@ router.put('/update-profile', jwtAuthMiddleware, async (req, res) => {
             user.username = username;
         }
 
+        // 3. Update Avatar if provided
+        if (req.file) {
+            user.avatar = req.file.path; // Cloudinary URL
+        }
+
         await user.save();
+
+        // 4. SYNC WITH STREAM CHAT
+        // We must update the user on Stream so the avatar reflects immediately in global/private chats
+        try {
+            await serverClient.upsertUser({
+                id: user._id.toString(),
+                name: user.username,
+                image: user.avatar, // Sync the new avatar URL
+                role: user.role === 'admin' ? 'admin' : 'user',
+                metaverse_role: user.role
+            });
+            console.log("✅ Synced user profile with Stream Chat");
+        } catch (streamError) {
+            console.error("❌ Failed to sync with Stream Chat:", streamError);
+            // Don't fail the whole request, just log it
+        }
 
         res.json({
             message: 'Profile updated successfully.',
@@ -116,6 +142,7 @@ router.put('/update-profile', jwtAuthMiddleware, async (req, res) => {
                 _id: user._id,
                 username: user.username,
                 email: user.email,
+                avatar: user.avatar,
                 role: user.role
             }
         });
