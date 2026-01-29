@@ -137,30 +137,20 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
     }
   };
 
-  const testConnection = () => {
-    console.log('🧪 === CONNECTION TEST ===');
-    console.log('Microphone enabled:', isConnected);
-    console.log('Video enabled:', isVideoEnabled);
-    console.log('PeerService.peer:', peerService.peer);
-    console.log('PeerService.localStream:', peerService.localStream);
-    console.log('Active calls:', peerService.getActiveCalls());
-    console.log('Remote streams:', peerService.getRemoteStreams().length);
-    console.log('Is muted:', isMuted);
-    console.log('Is transmitting:', isTransmitting);
-    if (window.game?.scene?.scenes[0]) {
-      const scene = window.game.scene.scenes[0];
-      console.log('Current nearby players:', Array.from(scene.currentNearbyPlayers || []));
-      console.log('All players in scene:', Object.keys(scene.players || {}));
-    }
-    console.log('=========================');
-  };
-
   return (
     <div className="voice-chat-container">
 
       {/* Avatar */}
-      <div className="avatar-display">
-        {user?.username?.[0]?.toUpperCase() || '?'}
+      <div className="avatar-display" style={{ overflow: 'hidden' }}>
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt="Me"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          user?.username?.[0]?.toUpperCase() || '?'
+        )}
         {isConnected && <div className="online-indicator"></div>}
       </div>
 
@@ -188,15 +178,6 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
           alt={isVideoEnabled ? 'Camera On' : 'Camera Off'}
           className="mic-icon"
         />
-      </button>
-
-      {/* Test Button */}
-      <button
-        onClick={testConnection}
-        className="mic-button debug-button"
-        title="Test Connection (Check Console)"
-      >
-        🧪
       </button>
 
       {/* Permission Warning */}

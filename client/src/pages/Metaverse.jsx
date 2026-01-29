@@ -14,6 +14,8 @@ import ServerStats from "../components/ServerStats"; // Import
 
 import ZoomControls from "../components/ZoomControls"; // Import
 
+import Minimap from "../components/Minimap"; // Import
+
 function Metaverse() {
     const { user } = useAuth();
     // 2. "Lift state up" - Manage video state here
@@ -47,6 +49,9 @@ function Metaverse() {
 
                 {/* Manual Zoom Controls */}
                 <ZoomControls />
+
+                {/* React Minimap Overlay */}
+                <Minimap />
 
                 {/* 4. Pass the state and setter down to the controls */}
                 <VoiceChat

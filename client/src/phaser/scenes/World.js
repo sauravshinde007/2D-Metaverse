@@ -109,6 +109,14 @@ export default class WorldScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
+    this.mapWidth = map.widthInPixels;
+    this.mapHeight = map.heightInPixels;
+
+    // Dispatch map size to React for UI Minimap
+    window.dispatchEvent(new CustomEvent('map-init', {
+      detail: { width: this.mapWidth, height: this.mapHeight }
+    }));
+
     this.players = {};
     this.createAnimations();
 
@@ -1033,6 +1041,20 @@ export default class WorldScene extends Phaser.Scene {
 
   update() {
     if (!this.player || !this.player.body) return;
+
+    // 📡 Dispatch Minimap Data
+    const otherPlayers = Object.keys(this.players).map(id => ({
+      id,
+      x: this.players[id].x,
+      y: this.players[id].y
+    }));
+
+    window.dispatchEvent(new CustomEvent('minimap-update', {
+      detail: {
+        me: { x: this.player.x, y: this.player.y },
+        others: otherPlayers
+      }
+    }));
 
     // Username text follows player
     this.playerUsernameText.setPosition(this.player.x, this.player.y - 30);
