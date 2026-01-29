@@ -48,11 +48,33 @@ router.post("/signup", async (req, res) => {
         });
 
         const token = jwt.sign({ userId: newUser.id, username: newUser.username, role: newUser.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(201).json({ token, userId: newUser.id, username: newUser.username, role: newUser.role, email: newUser.email });
+        res.status(201).json({ token, userId: newUser.id, username: newUser.username, role: newUser.role, email: newUser.email, avatar: newUser.avatar });
 
     } catch (error) {
         console.error("Error during signup:", error); // Add this line
         res.status(500).json({ message: "Something went wrong during signup." });
+    }
+});
+
+import jwtAuthMiddleware from '../middleware/auth.js';
+
+// GET CURRENT USER
+router.get("/me", jwtAuthMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.userData.userId).select('-password');
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Return same structure as login
+        res.json({
+            userId: user.id,
+            username: user.username,
+            role: user.role,
+            email: user.email,
+            avatar: user.avatar
+        });
+    } catch (error) {
+        console.error("Error fetching me:", error);
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -84,7 +106,7 @@ router.post("/login", async (req, res) => {
         }
 
         const token = jwt.sign({ userId: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(200).json({ token, userId: user.id, username: user.username, role: user.role, email: user.email });
+        res.status(200).json({ token, userId: user.id, username: user.username, role: user.role, email: user.email, avatar: user.avatar });
 
     } catch (error) {
         console.error("Error during login:", error);

@@ -32,14 +32,47 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Restore session from localStorage on first load
+  const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
+
+  // Restore session from localStorage on first load, THEN verify with server
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
-      login(JSON.parse(storedUser), storedToken);
-    }
-  }, [login]);
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (storedToken) {
+        // 1. Optimistically load from localStorage first (fast render)
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+          setToken(storedToken);
+        }
+
+        // 2. Background fetch to get FRESH data (fix stale avatar issues)
+        try {
+          const response = await fetch(`${serverUrl}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+
+          if (response.ok) {
+            const freshUser = await response.json();
+            setUser(freshUser);
+            // Update localStorage with truth
+            localStorage.setItem('user', JSON.stringify(freshUser));
+          } else {
+            // Token invalid or expired
+            console.warn("Session expired or invalid, logging out.");
+            logout();
+          }
+        } catch (err) {
+          console.error("Failed to verify session:", err);
+          // If network error, we might keep the local user, or logout. 
+          // Keeping local user is safer for shaky connections.
+        }
+      }
+    };
+
+    initAuth();
+  }, [logout]);
 
   // 🔴 Listen for server-side forceDisconnect ONLY when logged in
   useEffect(() => {

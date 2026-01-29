@@ -1,0 +1,41 @@
+/* client/src/styles/zoomcontrols.css */
+.zoom-controls-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+}
+
+.zoom-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(63, 63, 92, 0.4);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    
+    background: rgba(18, 18, 30, 0.85);
+    backdrop-filter: blur(8px);
+    color: #e6e7ea;
+    
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.zoom-button:hover {
+    background: rgba(30, 30, 45, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+    border-color: rgba(155, 153, 254, 0.4);
+}
+
+.zoom-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
