@@ -165,6 +165,12 @@ export default (io) => {
       socket.broadcast.emit("playerVideoStatus", { id: socket.id, videoEnabled: p.videoEnabled });
     });
 
+    // Broadcast Reaction (Emoji)
+    socket.on("reaction", (emoji) => {
+      // Broadcast to everyone (including sender, simplifies client logic if we just listen to one event)
+      io.emit("playerReaction", { id: socket.id, emoji });
+    });
+
     socket.on("disconnect", async () => {
       const p = players[socket.id];
       if (!p) {

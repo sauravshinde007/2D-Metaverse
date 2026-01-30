@@ -12,20 +12,22 @@ import { Server } from "socket.io";
 import cors from "cors";
 import mongoose from "mongoose";
 import { ExpressPeerServer } from "peer";
+import passport from 'passport';
 
 // Import separated logic
 import socketHandler from "./socket/socketHandler.js";
-import authRoutes from "./api/auth.js";
-import streamApiRoutes from "./api/stream.js";
-import usersRoute from "./routes/users.js";
+import authRoutes from "./routes/authRoutes.js";
+import streamRoutes from "./routes/streamRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import configurePassport from './config/passport.js';
+import User from './models/User.js'; // Import statically
+import { syncUsersBatch } from "./services/streamService.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Initialize Passport
-import passport from 'passport';
-import configurePassport from './config/passport.js';
 configurePassport();
 app.use(passport.initialize());
 
@@ -49,7 +51,20 @@ peerServer.on("disconnect", (client) => {
 // --- Database Connection ---
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(async () => {
+    console.log("✅ MongoDB connected");
+
+    // --- SYNC USERS TO STREAM CHAT ON STARTUP ---
+    try {
+      const users = await User.find({});
+      if (users.length > 0) {
+        await syncUsersBatch(users);
+      }
+    } catch (err) {
+      console.error("❌ Failed to sync users to Stream Chat on startup:", err);
+    }
+
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // --- Socket.IO ---
@@ -57,8 +72,8 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 // --- API Routes ---
 app.use("/api/auth", authRoutes);        // Authentication routes (signup/login)
-app.use("/api/stream", streamApiRoutes); // Stream Chat related routes
-app.use("/api/users", usersRoute);       // Users routes
+app.use("/api/stream", streamRoutes);    // Stream Chat related routes
+app.use("/api/users", userRoutes);       // Users routes
 
 // --- Socket.IO Connection Handling ---
 socketHandler(io);

@@ -93,8 +93,16 @@ export default function AdminPanel({ isOpen, onClose }) {
 
                                     {/* User Info */}
                                     <div className="col-span-4 flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                            {u.username.charAt(0).toUpperCase()}
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                                            {u.avatar ? (
+                                                <img
+                                                    src={u.avatar}
+                                                    alt={u.username}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                u.username.charAt(0).toUpperCase()
+                                            )}
                                         </div>
                                         <span className="text-gray-200 font-medium truncate">{u.username}</span>
                                     </div>

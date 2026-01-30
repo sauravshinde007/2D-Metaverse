@@ -96,7 +96,7 @@ export default function ServerStats() {
         <>
             {/* Widget Button */}
             <div
-                className="fixed top-4 right-4 z-40 flex flex-col items-end gap-2 pointer-events-auto"
+                className="fixed top-4 right-4 z-[150] flex flex-col items-end gap-2 pointer-events-auto"
             >
                 <button
                     onClick={() => setIsOpen(!isOpen)}
@@ -123,7 +123,7 @@ export default function ServerStats() {
             {/* Expanded List Panel */}
             <AnimatePresence>
                 {isOpen && (
-                    <div className="fixed inset-0 z-50 flex justify-end p-4 pointer-events-none">
+                    <div className="fixed inset-0 z-[2000] flex justify-end p-4 pointer-events-none">
                         {/* Backdrop for mobile */}
                         <motion.div
                             initial={{ opacity: 0 }}

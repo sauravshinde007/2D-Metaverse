@@ -7,12 +7,12 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  
+
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 10px;
-  
+
   padding: 6px 10px;
   border-radius: 50px;
 
@@ -23,8 +23,8 @@
     0 18px 40px rgba(0, 0, 0, 0.8),
     0 0 0 1px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(18px);
-  
-  z-index: 1000;
+
+  z-index: 100;
   color: #e6e7ea;
 }
 
@@ -53,14 +53,15 @@
 /* Online indicator */
 .avatar-display .online-indicator {
   position: absolute;
-  bottom: -1px;
-  right: -1px;
+  bottom: 0px;
+  right: 0px;
 
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: #22c55e;
   box-shadow: 0 0 0 2px #050509;
+  z-index: 10;
 }
 
 /* Icon buttons */
@@ -110,6 +111,7 @@
   background-image: linear-gradient(135deg, #9b99fe, #2bc8b7);
   box-shadow: 0 10px 26px rgba(11, 226, 180, 0.55);
 }
+
 .mic-button.active .mic-icon {
   filter: invert(0%);
 }
@@ -118,8 +120,10 @@
 .mic-button.muted {
   background: rgba(37, 37, 55, 0.95);
 }
+
 .mic-button.muted .mic-icon {
   filter: invert(100%);
+  opacity: 0.65;
 }
 
 /* Disabled */

@@ -29,6 +29,10 @@ export default class WorldScene extends Phaser.Scene {
 
     // 🔌 Socket Listener References (for cleanup)
     this.socketHandlers = {};
+    this.peerUnsubscribes = [];
+    this.myVideoElement = null;
+    this.isProximityMode = false;
+    this.localVideoEnabled = false; // Track this separately
   }
 
   init(data) {
@@ -132,6 +136,19 @@ export default class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // ✨ Local Player Highlight (Avatar Glow)
+    // using preFX for better performance on single sprites
+    const localGlow = this.player.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+    localGlow.setActive(false);
+
+    this.player.setInteractive();
+    this.player.on('pointerover', () => {
+      localGlow.setActive(true);
+    });
+    this.player.on('pointerout', () => {
+      localGlow.setActive(false);
+    });
+
     // 🔒 Initialize RBAC Zones
     this.createRestrictedZones(map);
 
@@ -153,9 +170,56 @@ export default class WorldScene extends Phaser.Scene {
       this.cameras.main.setZoom(1.5);
     }
 
+    // 🖱️ Mouse Drag to Pan Camera
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let camStart = { x: 0, y: 0 };
+
+    this.input.on('pointerdown', (pointer) => {
+      // Only left click (button 0)
+      // Ensure not clicking on UI
+      if (pointer.button === 0) {
+        this.cameras.main.stopFollow();
+        isDragging = true;
+        dragStart.x = pointer.x;
+        dragStart.y = pointer.y;
+        camStart.x = this.cameras.main.scrollX;
+        camStart.y = this.cameras.main.scrollY;
+        this.input.setDefaultCursor('grabbing');
+      }
+    });
+
+    this.input.on('pointermove', (pointer) => {
+      if (isDragging) {
+        if (!pointer.isDown) {
+          isDragging = false;
+          this.input.setDefaultCursor('default');
+          return;
+        }
+        const zoom = this.cameras.main.zoom;
+        // Calculate how much mouse moved in SCREEN pixels, divide by zoom to get WORLD units
+        const diffX = (pointer.x - dragStart.x) / zoom;
+        const diffY = (pointer.y - dragStart.y) / zoom;
+
+        this.cameras.main.scrollX = camStart.x - diffX;
+        this.cameras.main.scrollY = camStart.y - diffY;
+      }
+    });
+
+    this.input.on('pointerup', () => {
+      isDragging = false;
+      this.input.setDefaultCursor('default');
+    });
+
+    // Safety: if mouse leaves window
+    this.input.on('pointerout', () => {
+      isDragging = false;
+      this.input.setDefaultCursor('default');
+    });
+
     // 🖱️ Mouse Wheel Zoom
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
-      const zoomAmount = 0.3;
+      const zoomAmount = 0.3; // Sensitivity
       let newZoom = this.cameras.main.zoom;
 
       if (deltaY > 0) {
@@ -302,6 +366,22 @@ export default class WorldScene extends Phaser.Scene {
     };
     socketService.onPlayerLeft(this.socketHandlers.onPlayerLeft);
 
+    this.socketHandlers.onPlayerReaction = ({ id, emoji }) => {
+      if (!this.scene.isActive()) return;
+
+      let target = null;
+      if (id === socketService.socket.id) {
+        target = this.player;
+      } else {
+        target = this.players[id];
+      }
+
+      if (target) {
+        this.showReaction(target, emoji);
+      }
+    };
+    socketService.onPlayerReaction(this.socketHandlers.onPlayerReaction);
+
     // Register cleanup on scene shutdown
     this.events.on('shutdown', this.cleanupSocketListeners, this);
     this.events.on('destroy', this.cleanupSocketListeners, this);
@@ -332,6 +412,23 @@ export default class WorldScene extends Phaser.Scene {
     // Nearby players throttling
     this.lastNearbyPlayersUpdate = 0;
     this.nearbyPlayersUpdateInterval = 1000; // ms
+    this.isProximityMode = false; // Initialize proximity mode state
+    this.localVideoEnabled = false; // Initialize local video enabled state
+
+    // Listen for UI toggles
+    window.addEventListener('local-video-toggle', (e) => {
+      console.log("📺 Local video toggle event:", e.detail);
+      this.localVideoEnabled = e.detail;
+      this.toggleLocalVideo(e.detail);
+    });
+
+    // Listen for Proximity Mode changes
+    window.addEventListener('proximity-video-active', (e) => {
+      // console.log("🔄 Proximity mode changed:", e.detail);
+      this.isProximityMode = e.detail;
+      // Re-evaluate video display
+      this.toggleLocalVideo(this.localVideoEnabled);
+    });
   }
 
   async initializePeerJS() {
@@ -352,15 +449,17 @@ export default class WorldScene extends Phaser.Scene {
       console.log("📝 Registered peer ID with server");
 
       // Stream handlers
-      peerService.onStreamReceived((peerId, stream) => {
+      const unsubStream = peerService.onStreamReceived((peerId, stream) => {
         console.log("🔊 Received audio stream from:", peerId);
         this.handleRemoteStream(peerId, stream);
       });
+      this.peerUnsubscribes.push(unsubStream);
 
-      peerService.onCallEnded((peerId) => {
+      const unsubCallEnd = peerService.onCallEnded((peerId) => {
         console.log("📴 Call ended with:", peerId);
         this.handleCallEnded(peerId);
       });
+      this.peerUnsubscribes.push(unsubCallEnd);
     } catch (error) {
       console.error("❌ Failed to initialize PeerJS:", error);
       console.error("Error name:", error.name);
@@ -390,7 +489,7 @@ export default class WorldScene extends Phaser.Scene {
             peerService.endCall(pid);
             this.currentNearbyPlayers.delete(pid);
             this.disconnectTimers.delete(pid);
-          }, 2000); // 2 second grace period
+          }, 1000); // 1 second grace period
 
           this.disconnectTimers.set(pid, timerId);
         }
@@ -431,6 +530,28 @@ export default class WorldScene extends Phaser.Scene {
     socketService.onPlayerInProximity(this.socketHandlers.onPlayerInProximity);
   }
 
+  showReaction(target, emoji) {
+    // Create text object above the player
+    const x = target.x;
+    const y = target.y - 50;
+
+    const emojiText = this.add.text(x, y, emoji, {
+      fontSize: "32px",
+    }).setOrigin(0.5).setDepth(100);
+
+    // Animate: Float up and fade out
+    this.tweens.add({
+      targets: emojiText,
+      y: y - 40,
+      alpha: 0,
+      duration: 2000,
+      ease: "Power1",
+      onComplete: () => {
+        emojiText.destroy();
+      }
+    });
+  }
+
   cleanupSocketListeners() {
     console.log("🧹 Cleaning up socket listeners...");
     if (this.socketHandlers.onPlayers) socketService.off("players", this.socketHandlers.onPlayers);
@@ -440,8 +561,15 @@ export default class WorldScene extends Phaser.Scene {
     if (this.socketHandlers.onPlayerLeft) socketService.off("playerLeft", this.socketHandlers.onPlayerLeft);
     if (this.socketHandlers.onInitiateProximityCalls) socketService.off("initiateProximityCalls", this.socketHandlers.onInitiateProximityCalls);
     if (this.socketHandlers.onPlayerInProximity) socketService.off("playerInProximity", this.socketHandlers.onPlayerInProximity);
+    if (this.socketHandlers.onPlayerReaction) socketService.off("playerReaction", this.socketHandlers.onPlayerReaction);
 
     this.socketHandlers = {};
+
+    // Cleanup PeerService listeners
+    if (this.peerUnsubscribes) {
+      this.peerUnsubscribes.forEach((unsub) => unsub && unsub());
+      this.peerUnsubscribes = [];
+    }
   }
 
   handleRemoteStream(peerId, stream) {
@@ -1031,6 +1159,18 @@ export default class WorldScene extends Phaser.Scene {
       otherPlayerSprite,
       usernameText,
     ]);
+
+    // ✨ REMOTE PLAYER Highlight (Avatar Glow)
+    const remoteGlow = otherPlayerSprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+    remoteGlow.setActive(false);
+
+    otherPlayerSprite.setInteractive();
+    otherPlayerSprite.on('pointerover', () => {
+      remoteGlow.setActive(true);
+    });
+    otherPlayerSprite.on('pointerout', () => {
+      remoteGlow.setActive(false);
+    });
     playerContainer.setDepth(5);
     if (data.anim) otherPlayerSprite.anims.play(data.anim, true);
     else otherPlayerSprite.setFrame(18);
@@ -1085,9 +1225,10 @@ export default class WorldScene extends Phaser.Scene {
     else if (this.movement.down) dy = 1;
 
     // 🚶 Re-enable Camera Follow on Movement
-    if ((dx !== 0 || dy !== 0) && !this.isCameraFollowEnabled) {
-      this.cameras.main.startFollow(this.player);
-      this.isCameraFollowEnabled = true;
+    if (dx !== 0 || dy !== 0) {
+      if (!this.cameras.main._follow) {
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+      }
     }
 
     this.player.body.setVelocityX(dx * speed);
@@ -1122,6 +1263,113 @@ export default class WorldScene extends Phaser.Scene {
       });
 
       this.lastNearbyPlayersUpdate = now;
+    }
+
+    // New: Sync local video position
+    this.updateLocalVideoPosition();
+  }
+
+  updateLocalVideoPosition() {
+    // If in proximity mode, the video is handled by the UI, not a bubble
+    if (this.isProximityMode) {
+      if (this.myVideoElement && this.myVideoElement.style.display !== 'none') {
+        this.myVideoElement.style.display = 'none'; // Hide if it somehow exists
+      }
+      return;
+    }
+
+    if (this.myVideoElement && this.player) {
+      // Calculate screen position manually as worldToCamera is not standard on all Phaser versions/types
+
+      // Player is ~48px tall, text is at -30. Let's put video at -80
+      const videoExp = document.getElementById('local-video-bubble');
+      if (videoExp) {
+        // We need absolute screen position (taking into account canvas offset if any)
+        // Assuming canvas fills window for now or standard layout
+
+        // worldToCamera gives partial, we need absolute
+        const canvas = this.game.canvas;
+        const rect = canvas.getBoundingClientRect();
+
+        // Calculate position: 
+        // camera.scrollX/Y affects worldToCamera results? No, worldToCamera(x,y) 
+        // actually gives relative to camera top-left.
+        // We need to factor in zoom.
+
+        const cam = this.cameras.main;
+        const screenX = (this.player.x - cam.worldView.x) * cam.zoom;
+        const screenY = (this.player.y - cam.worldView.y) * cam.zoom;
+
+        // Offset for video size (say 100x75)
+        const vidW = 120;
+        const vidH = 90;
+
+        videoExp.style.left = `${rect.left + screenX - (vidW / 2)}px`;
+        videoExp.style.top = `${rect.top + screenY - vidH - 60}px`; // 60px above center (roughly above head)
+
+        // Only show if on screen
+        if (
+          screenX < -vidW || screenX > cam.width + vidW ||
+          screenY < -vidH || screenY > cam.height + vidH
+        ) {
+          videoExp.style.display = 'none';
+        } else {
+          videoExp.style.display = 'block';
+          videoExp.style.pointerEvents = 'none'; // Force no interaction
+        }
+      }
+    }
+  }
+
+  toggleLocalVideo(enabled) {
+    // If NOT enabled, remove bubble always
+    if (!enabled) {
+      if (this.myVideoElement) {
+        if (this.myVideoElement.parentNode) {
+          this.myVideoElement.parentNode.removeChild(this.myVideoElement);
+        }
+        this.myVideoElement = null;
+      }
+      return;
+    }
+
+    // IF enabled...
+    // Only show bubble if NOT in proximity mode
+    if (this.isProximityMode) {
+      // Hide bubble if it exists, because video is in top bar
+      if (this.myVideoElement) {
+        if (this.myVideoElement.parentNode) {
+          this.myVideoElement.parentNode.removeChild(this.myVideoElement);
+        }
+        this.myVideoElement = null;
+      }
+      return;
+    }
+
+    // Otherwise, Create/Show bubble
+    if (!this.myVideoElement) {
+      const vid = document.createElement("video");
+      vid.id = "local-video-bubble";
+      vid.autoplay = true;
+      vid.muted = true;
+      vid.playsInline = true;
+      vid.style.position = "absolute";
+      vid.style.width = "120px";
+      vid.style.height = "90px";
+      vid.style.objectFit = "cover";
+      vid.style.borderRadius = "8px";
+      vid.style.border = "2px solid #9b99fe";
+      vid.style.zIndex = "50"; // Above canvas
+      vid.style.boxShadow = "0 4px 10px rgba(0,0,0,0.5)";
+      vid.style.pointerEvents = "none"; // Let interaction pass to canvas
+
+      document.body.appendChild(vid);
+      this.myVideoElement = vid;
+
+      // Attach stream
+      if (peerService.localStream) {
+        vid.srcObject = peerService.localStream;
+      }
     }
   }
 }

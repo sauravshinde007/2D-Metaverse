@@ -61,9 +61,17 @@ const socketService = {
     socket?.emit("videoStatus", enabled);
   },
 
+  emitReaction(emoji) {
+    socket?.emit("reaction", emoji);
+  },
+
   // ====== LISTEN EVENTS ======
   onPlayers(callback) {
     socket?.on("players", callback);
+  },
+
+  onPlayerReaction(callback) {
+    socket?.on("playerReaction", callback);
   },
 
   onPlayerJoined(callback) {

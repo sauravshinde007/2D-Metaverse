@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { StreamChat } from 'stream-chat';
 import { useAuth } from './AuthContext';
+import { useNotification } from './NotificationContext'; // ✨ Import notification context
 
 const apiKey = import.meta.env.VITE_STREAM_API_KEY;
 const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
@@ -14,6 +15,7 @@ export const ChatProvider = ({ children }) => {
     const [isConnecting, setIsConnecting] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState({ world: 0, private: 0 });
     const { user, token, logout } = useAuth();
+    const { addNotification } = useNotification(); // ✨ Get the notification function
 
     useEffect(() => {
         // This is the main connection and cleanup logic
@@ -49,8 +51,6 @@ export const ChatProvider = ({ children }) => {
                 const data = await response.json();
 
                 // Robust ID selection:
-                // Login returns 'userId', Update Profile returns '_id'. We must handle both.
-                // Fallback to username only if absolutely necessary, but mismatch will cause error.
                 const streamRole = user.role === 'admin' ? 'admin' : 'user';
                 const streamDetails = {
                     id: user.userId || user._id || user.id, // <--- CHANGED: Prioritize ID
@@ -79,24 +79,19 @@ export const ChatProvider = ({ children }) => {
 
                     if (event.channel_id === 'global-lobby') {
                         setUnreadCounts(prev => ({ ...prev, world: prev.world + 1 }));
+                        // ✨ Add World Chat Notification
+                        addNotification(`New message in World Chat`, 'info');
                     } else {
                         setUnreadCounts(prev => ({ ...prev, private: prev.private + 1 }));
+                        // ✨ Add Private Chat Notification
+                        addNotification(`New private message from ${event.user.name || event.user.id}`, 'info');
                     }
                 });
 
                 // Also listen for notifications (when added to new channel etc)
                 client.on('notification.message_new', (event) => {
-                    // Check if it's already handled by message.new (if we are watching the channel)
-                    // Usually notification.message_new comes for channels we aren't actively watching in the UI connection list yet?
-                    // For safety, we can rely on message.new for watched channels.
-                    // But for private chats we might not be watching all of them explicitly until we query.
-                    // Simplified approach: message.new usually covers watched channels.
-                    // If we are notified of a message in a channel we don't have open, it might still fire message.new if we are connected.
+                    // Similar logic if needed, but message.new covers active connection events
                 });
-
-                // Initial unread count fetch (optional, for simple MVP starting at 0 is fine, 
-                // but fetching real counts is better)
-                // const counts = await client.queryChannels(...) loops... let's keep it simple (session based) for now as requested.
 
             } catch (error) {
                 console.error("Failed to initialize chat:", error);
@@ -122,7 +117,7 @@ export const ChatProvider = ({ children }) => {
             setChannel(null);
             setIsConnecting(true);
         };
-    }, [user, token]); // Rerun this entire effect if the user or token changes
+    }, [user, token, addNotification]); // Added addNotification dependence
 
     const markAsRead = (type) => {
         setUnreadCounts(prev => ({ ...prev, [type]: 0 }));

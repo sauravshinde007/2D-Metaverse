@@ -141,7 +141,7 @@ export default function PrivateChatManager({ onClose }) {
   const startPrivateChat = async (targetUser) => {
     try {
       const channel = chatClient.channel('messaging', {
-        members: [chatClient.userID, targetUser.username],
+        members: [chatClient.userID, targetUser._id],
       })
       await channel.watch()
       setActivePrivateChannel(channel)

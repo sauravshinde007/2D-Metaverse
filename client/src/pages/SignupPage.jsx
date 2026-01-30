@@ -24,8 +24,8 @@ const SignupPage = () => {
         email,
         password,
       })
-      const { token, userId, username: serverUsername, role, email: serverEmail } = response.data
-      login({ id: userId, username: serverUsername, role, email: serverEmail }, token)
+      const { token, userId, username: serverUsername, role, email: serverEmail, avatar } = response.data
+      login({ id: userId, username: serverUsername, role, email: serverEmail, avatar }, token)
       navigate('/metaverse')
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to sign up.')

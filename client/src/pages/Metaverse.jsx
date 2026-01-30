@@ -6,7 +6,7 @@ import startGame from "../phaser";
 import Sidebar from "../components/Sidebar";
 import VoiceChat from "../components/VoiceChat";
 import VideoGrid from "../components/VideoGrid";
-import LocalVideoView from "../components/LocalVideoView"; // <-- 1. Import LocalVideoView
+
 import { ChatProvider } from "../context/ChatContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -35,14 +35,19 @@ function Metaverse() {
         }
     }, [user]);
 
+    // Dispatch event to Phaser when video state changes
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('local-video-toggle', { detail: isVideoEnabled }));
+    }, [isVideoEnabled]);
+
     return (
         <ChatProvider>
             <div className="app-root">
                 <div id="game-container" className="game-container" />
-                {/* 3. Add LocalVideoView, controlled by the state */}
-                <LocalVideoView isVisible={isVideoEnabled} />
 
-                <VideoGrid />
+                {/* Local Video handled by Phaser now */}
+
+                <VideoGrid isVideoEnabled={isVideoEnabled} />
 
                 {/* New Server Stats Widget */}
                 <ServerStats />

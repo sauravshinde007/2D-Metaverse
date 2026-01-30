@@ -14,6 +14,12 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
   const [activeCalls, setActiveCalls] = useState([]);
   const [micPermission, setMicPermission] = useState('pending');
   const [isTransmitting, setIsTransmitting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const handleReaction = (emoji) => {
+    socketService.emitReaction(emoji);
+    setShowEmojiPicker(false);
+  };
 
   useEffect(() => {
     // Check microphone permission status
@@ -141,17 +147,18 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
     <div className="voice-chat-container">
 
       {/* Avatar */}
-      <div className="avatar-display" style={{ overflow: 'hidden' }}>
+      {/* Avatar */}
+      <div className="avatar-display">
         {user?.avatar ? (
           <img
             src={user.avatar}
             alt="Me"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
           />
         ) : (
           user?.username?.[0]?.toUpperCase() || '?'
         )}
-        {isConnected && <div className="online-indicator"></div>}
+        <div className="online-indicator"></div>
       </div>
 
       {/* Microphone Button */}
@@ -160,11 +167,22 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
         onClick={handleMicClick}
         title={isConnected ? (isMuted ? 'Unmute' : 'Mute') : 'Join Audio'}
       >
-        <img
-          src={isConnected && !isMuted ? '/icons/mic-active.png' : '/icons/mic-muted.png'}
-          alt="Microphone"
-          className="mic-icon"
-        />
+        {isConnected && !isMuted ? (
+          <svg className="mic-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        ) : (
+          <svg className="mic-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        )}
       </button>
 
       {/* Camera Button (uses props) */}
@@ -173,12 +191,68 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
         onClick={handleVideoClick}
         title={isConnected ? (isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On') : 'Join with Video'}
       >
-        <img
-          src={isVideoEnabled ? '/icons/camera-on.png' : '/icons/camera-off.png'}
-          alt={isVideoEnabled ? 'Camera On' : 'Camera Off'}
-          className="mic-icon"
-        />
+        {isVideoEnabled ? (
+          <svg className="mic-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 7l-7 5 7 5V7z" />
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          </svg>
+        ) : (
+          <svg className="mic-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+        )}
       </button>
+
+      {/* Reaction Button */}
+      <div style={{ position: 'relative' }}>
+        <button
+          className="mic-button muted"
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          title="Send Reaction"
+        >
+          <span style={{ fontSize: '20px' }}>😀</span>
+        </button>
+
+        {showEmojiPicker && (
+          <div className="emoji-picker" style={{
+            position: 'absolute',
+            bottom: '50px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(18, 18, 30, 0.95)',
+            border: '1px solid rgba(63, 63, 92, 0.85)',
+            borderRadius: '12px',
+            padding: '10px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(10px)',
+            width: 'max-content'
+          }}>
+            {['😀', '😂', '😍', '😢', '👏', '👎', '🎉', '🔥', '👋'].map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => handleReaction(emoji)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '5px',
+                  borderRadius: '5px',
+                  transition: 'transform 0.1s'
+                }}
+                onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'}
+                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Permission Warning */}
       {micPermission === 'denied' && (
