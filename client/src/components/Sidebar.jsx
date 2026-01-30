@@ -107,7 +107,7 @@ export default function Sidebar() {
 
       {/* WORLD CHAT — ROUNDED panel */}
       {activePanel === 'WORLD' && (
-        <div className="ml-4 h-full max-h-[70vh] w-[320px] max-w-sm rounded-xl border border-zinc-800 bg-zinc-950/85 shadow-2xl backdrop-blur-xl">
+        <div className="ml-4 h-full max-h-[70vh] w-[320px] max-w-sm rounded-xl border border-zinc-800 bg-zinc-950/85 shadow-2xl backdrop-blur-xl relative z-[150]">
           <WorldChat
             chatClient={chatClient}
             channel={channel}

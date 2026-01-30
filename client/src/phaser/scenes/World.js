@@ -136,6 +136,19 @@ export default class WorldScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // ✨ Local Player Highlight (Avatar Glow)
+    // using preFX for better performance on single sprites
+    const localGlow = this.player.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+    localGlow.setActive(false);
+
+    this.player.setInteractive();
+    this.player.on('pointerover', () => {
+      localGlow.setActive(true);
+    });
+    this.player.on('pointerout', () => {
+      localGlow.setActive(false);
+    });
+
     // 🔒 Initialize RBAC Zones
     this.createRestrictedZones(map);
 
@@ -163,11 +176,9 @@ export default class WorldScene extends Phaser.Scene {
     let camStart = { x: 0, y: 0 };
 
     this.input.on('pointerdown', (pointer) => {
-      console.log("👇 Phaser Pointer Down:", pointer.x, pointer.y, "Button:", pointer.button);
       // Only left click (button 0)
       // Ensure not clicking on UI
       if (pointer.button === 0) {
-        console.log("   -> Start Drag");
         this.cameras.main.stopFollow();
         isDragging = true;
         dragStart.x = pointer.x;
@@ -181,7 +192,6 @@ export default class WorldScene extends Phaser.Scene {
     this.input.on('pointermove', (pointer) => {
       if (isDragging) {
         if (!pointer.isDown) {
-          console.log("   -> Drag stopped (pointer up)");
           isDragging = false;
           this.input.setDefaultCursor('default');
           return;
@@ -197,27 +207,18 @@ export default class WorldScene extends Phaser.Scene {
     });
 
     this.input.on('pointerup', () => {
-      if (isDragging) console.log("☝️ Phaser Pointer Up");
       isDragging = false;
       this.input.setDefaultCursor('default');
     });
 
     // Safety: if mouse leaves window
     this.input.on('pointerout', () => {
-      if (isDragging) console.log("👋 Phaser Pointer Out");
       isDragging = false;
       this.input.setDefaultCursor('default');
     });
 
-    // Native Canvas Debugging
-    if (this.game.canvas) {
-      this.game.canvas.addEventListener('mousedown', () => console.log('🟢 Native Canvas Mousedown detected - DOM is accessible'));
-      this.game.canvas.addEventListener('wheel', () => console.log('🟢 Native Canvas Wheel detected'));
-    }
-
     // 🖱️ Mouse Wheel Zoom
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
-      console.log("🎡 Phaser Wheel Event:", deltaY);
       const zoomAmount = 0.3; // Sensitivity
       let newZoom = this.cameras.main.zoom;
 
@@ -1158,6 +1159,18 @@ export default class WorldScene extends Phaser.Scene {
       otherPlayerSprite,
       usernameText,
     ]);
+
+    // ✨ REMOTE PLAYER Highlight (Avatar Glow)
+    const remoteGlow = otherPlayerSprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+    remoteGlow.setActive(false);
+
+    otherPlayerSprite.setInteractive();
+    otherPlayerSprite.on('pointerover', () => {
+      remoteGlow.setActive(true);
+    });
+    otherPlayerSprite.on('pointerout', () => {
+      remoteGlow.setActive(false);
+    });
     playerContainer.setDepth(5);
     if (data.anim) otherPlayerSprite.anims.play(data.anim, true);
     else otherPlayerSprite.setFrame(18);
