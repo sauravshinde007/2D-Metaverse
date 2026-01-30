@@ -105,6 +105,19 @@ router.post("/login", async (req, res) => {
             });
         }
 
+        // Sync user to Stream Chat (Ensure avatar is latest)
+        try {
+            await serverClient.upsertUser({
+                id: user._id.toString(),
+                name: user.username,
+                image: user.avatar || "",
+                role: user.role === 'admin' ? 'admin' : 'user',
+                metaverse_role: user.role
+            });
+        } catch (streamErr) {
+            console.error("Login stream sync failed (non-fatal):", streamErr);
+        }
+
         const token = jwt.sign({ userId: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.status(200).json({ token, userId: user.id, username: user.username, role: user.role, email: user.email, avatar: user.avatar });
 

@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/all', jwtAuthMiddleware, checkAdmin, async (req, res) => {
     try {
         // Return username, email, role, _id
-        const users = await User.find({}, 'username email role _id');
+        const users = await User.find({}, 'username email role avatar _id');
         res.json(users);
     } catch (err) {
         console.error("Admin fetch users error:", err);

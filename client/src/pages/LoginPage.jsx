@@ -28,24 +28,22 @@ const LoginPage = () => {
       // We need a simple decoder or just trust the backend sent valid token
       // Since we don't have jwt-decode imported, let's do a quick base64 decode of the payload part
       try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
+        // Fetch full profile to ensure we have the avatar
+        // content of the token is useful, but we prefer fresh data from server
+        // specifically for the avatar which isn't in the token usually
+        axios.get(`${serverUrl}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(res => {
+          const { userId, username, role, email, avatar } = res.data;
+          login({ id: userId, username, role, email, avatar }, token);
+          navigate("/metaverse");
+        }).catch(err => {
+          console.error("Failed to fetch profile for google login", err);
+          setError("Failed to verify Google login.");
+        });
 
-        const decoded = JSON.parse(jsonPayload);
-
-        login({
-          id: decoded.userId,
-          username: decoded.username,
-          role: decoded.role,
-          email: decoded.email // Might need to add email to payload in auth.js if not there
-        }, token);
-
-        navigate("/metaverse");
       } catch (e) {
-        console.error("Failed to decode token", e);
+        console.error("Failed to process Google login", e);
         setError("Failed to login with Google.");
       }
     }
@@ -62,9 +60,9 @@ const LoginPage = () => {
       });
 
       // Normal successful login
-      const { token, userId, username: serverUsername, role, email } = response.data;
+      const { token, userId, username: serverUsername, role, email, avatar } = response.data;
       // shape user object for AuthContext
-      login({ id: userId, username: serverUsername, role, email }, token);
+      login({ id: userId, username: serverUsername, role, email, avatar }, token);
       navigate("/metaverse");
     } catch (err) {
       const status = err.response?.status;
@@ -102,9 +100,10 @@ const LoginPage = () => {
             username: serverUsername,
             role,
             email,
+            avatar
           } = forceResponse.data;
 
-          login({ id: userId, username: serverUsername, role, email }, token);
+          login({ id: userId, username: serverUsername, role, email, avatar }, token);
           navigate("/metaverse");
           return;
         } catch (forceErr) {

@@ -49,7 +49,35 @@ peerServer.on("disconnect", (client) => {
 // --- Database Connection ---
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(async () => {
+    console.log("✅ MongoDB connected");
+
+    // --- SYNC USERS TO STREAM CHAT ON STARTUP ---
+    try {
+      const { StreamChat } = await import('stream-chat');
+      const User = (await import('./models/User.js')).default;
+
+      const serverClient = StreamChat.getInstance(process.env.STREAM_API_KEY, process.env.STREAM_API_SECRET);
+      const users = await User.find({});
+
+      if (users.length > 0) {
+        const streamUsers = users.map(u => ({
+          id: u._id.toString(),
+          name: u.username,
+          image: u.avatar || "",
+          role: u.role === 'admin' ? 'admin' : 'user',
+          metaverse_role: u.role
+        }));
+
+        // Batch upsert is efficient
+        await serverClient.upsertUsers(streamUsers);
+        console.log(`✅ Synced ${users.length} users to Stream Chat (Fixed offline avatars)`);
+      }
+    } catch (err) {
+      console.error("❌ Failed to sync users to Stream Chat on startup:", err);
+    }
+
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // --- Socket.IO ---
