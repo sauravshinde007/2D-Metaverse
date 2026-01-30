@@ -40,7 +40,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Sidebar — SHARP box */}
-      <div className="flex h-full w-16 flex-col items-center justify-between border border-zinc-800 bg-zinc-950/70 p-3 shadow-2xl backdrop-blur-xl">
+      <div className="flex h-full w-16 flex-col items-center justify-between border border-zinc-800 bg-zinc-950/70 p-3 shadow-2xl backdrop-blur-xl relative z-[200]">
         <div className="flex flex-col items-center gap-3">
           <RoundedIconButton
             active={activePanel === 'WORLD'}
@@ -119,7 +119,7 @@ export default function Sidebar() {
 
       {/* PRIVATE CHAT — fullscreen overlay with ROUNDED window */}
       {activePanel === 'PRIVATE' && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-lg">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 backdrop-blur-lg">
           <div className="h-[80vh] w-[90vw] max-w-5xl rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden">
             <PrivateChatManager onClose={handleClose} />
           </div>

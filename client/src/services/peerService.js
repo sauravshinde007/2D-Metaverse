@@ -7,88 +7,87 @@ class PeerService {
     this.localStream = null;
     this.activeCalls = new Map(); // Map of peerId -> call object
     this.remoteStreams = new Map(); // <-- NEW: Map of peerId -> remote stream
-    this.onCallReceivedCallback = null;
-    this.onStreamReceivedCallback = null;
-    this.onCallEndedCallback = null;
+    this.streamReceivedListeners = new Set();
+    this.callEndedListeners = new Set();
   }
 
- 
+
   async initialize(userId) {
-  // Don't re-initialize if already connected
-  if (this.peer && !this.peer.destroyed) {
-    console.log('⚠️ PeerJS already initialized');
-    return this.peer.id;
-  }
-
-  // 🔧 Derive host/port/secure from your SOCKET_SERVER_URL
-  const socketUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
-  const url = new URL(socketUrl);
-
-  const host = url.hostname;                 // e.g. w1npgpv2-3001.inc1.devtunnels.ms or localhost
-  const secure = url.protocol === 'https:';  // true for https devtunnel, false for http://localhost
-  const port = url.port
-    ? Number(url.port)
-    : secure
-      ? 443
-      : 80;                                  // sensible defaults when no port is specified
-
-  console.log('🌐 PeerJS config:', { host, port, secure });
-
-  return new Promise((resolve, reject) => {
-    try {
-      this.peer = new Peer(userId, {
-        host,
-        port,
-        path: '/peerjs',  // must match server mount
-        secure,
-        debug: 2,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-          ]
-        }
-      });
-
-      this.peer.on('open', (id) => {
-        console.log('✅ PeerJS connected with ID:', id);
-        resolve(id);
-      });
-
-      this.peer.on('error', (error) => {
-        console.error('❌ PeerJS error:', error);
-        console.error('Error type:', error.type);
-
-        if (error.type === 'network' || error.type === 'server-error') {
-          console.error('⚠️ Cannot connect to PeerJS server. Check host/port and devtunnel.');
-        } else if (error.type === 'peer-unavailable') {
-          console.error('⚠️ Remote peer is not available');
-        }
-
-        if (error.type !== 'network') {
-          reject(error);
-        }
-      });
-
-      this.peer.on('call', (call) => {
-        console.log('📞 Incoming call from:', call.peer);
-        this.handleIncomingCall(call);
-      });
-
-      this.peer.on('disconnected', () => {
-        console.log('⚠️ PeerJS disconnected. Attempting to reconnect...');
-        this.peer.reconnect();
-      });
-
-      this.peer.on('close', () => {
-        console.log('❌ PeerJS connection closed');
-      });
-
-    } catch (error) {
-      console.error('Failed to initialize PeerJS:', error);
-      reject(error);
+    // Don't re-initialize if already connected
+    if (this.peer && !this.peer.destroyed) {
+      console.log('⚠️ PeerJS already initialized');
+      return this.peer.id;
     }
-  });
-}
+
+    // 🔧 Derive host/port/secure from your SOCKET_SERVER_URL
+    const socketUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
+    const url = new URL(socketUrl);
+
+    const host = url.hostname;                 // e.g. w1npgpv2-3001.inc1.devtunnels.ms or localhost
+    const secure = url.protocol === 'https:';  // true for https devtunnel, false for http://localhost
+    const port = url.port
+      ? Number(url.port)
+      : secure
+        ? 443
+        : 80;                                  // sensible defaults when no port is specified
+
+    console.log('🌐 PeerJS config:', { host, port, secure });
+
+    return new Promise((resolve, reject) => {
+      try {
+        this.peer = new Peer(userId, {
+          host,
+          port,
+          path: '/peerjs',  // must match server mount
+          secure,
+          debug: 2,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+            ]
+          }
+        });
+
+        this.peer.on('open', (id) => {
+          console.log('✅ PeerJS connected with ID:', id);
+          resolve(id);
+        });
+
+        this.peer.on('error', (error) => {
+          console.error('❌ PeerJS error:', error);
+          console.error('Error type:', error.type);
+
+          if (error.type === 'network' || error.type === 'server-error') {
+            console.error('⚠️ Cannot connect to PeerJS server. Check host/port and devtunnel.');
+          } else if (error.type === 'peer-unavailable') {
+            console.error('⚠️ Remote peer is not available');
+          }
+
+          if (error.type !== 'network') {
+            reject(error);
+          }
+        });
+
+        this.peer.on('call', (call) => {
+          console.log('📞 Incoming call from:', call.peer);
+          this.handleIncomingCall(call);
+        });
+
+        this.peer.on('disconnected', () => {
+          console.log('⚠️ PeerJS disconnected. Attempting to reconnect...');
+          this.peer.reconnect();
+        });
+
+        this.peer.on('close', () => {
+          console.log('❌ PeerJS connection closed');
+        });
+
+      } catch (error) {
+        console.error('Failed to initialize PeerJS:', error);
+        reject(error);
+      }
+    });
+  }
 
 
   /**
@@ -96,10 +95,10 @@ class PeerService {
    * @param {Object} constraints - MediaStream constraints object (e.g., { audio: true, video: { ... } })
    */
   // <-- CHANGED: Signature now accepts a constraints object
-  async getUserMedia(constraints) { 
+  async getUserMedia(constraints) {
     try {
       console.log('Requesting media with constraints:', constraints);
-      
+
       // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('getUserMedia is not supported in this browser');
@@ -107,11 +106,11 @@ class PeerService {
 
       // <-- CHANGED: Use the constraints object directly
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
       console.log('✅ Local media stream obtained');
       console.log('Audio tracks:', this.localStream.getAudioTracks().length);
       console.log('Video tracks:', this.localStream.getVideoTracks().length);
-      
+
       // Verify audio track is enabled
       const audioTracks = this.localStream.getAudioTracks();
       if (audioTracks.length > 0) {
@@ -122,7 +121,7 @@ class PeerService {
 
       // <-- NEW: Disable video by default so user can enable it manually
       this.setVideoEnabled(false);
-      
+
       return this.localStream;
     } catch (error) {
       console.error('❌ Failed to get user media:', error);
@@ -155,20 +154,16 @@ class PeerService {
       console.log('✅ Received stream from:', remotePeerId);
       this.activeCalls.set(remotePeerId, call);
       this.remoteStreams.set(remotePeerId, remoteStream); // <-- NEW
-      
-      if (this.onStreamReceivedCallback) {
-        this.onStreamReceivedCallback(remotePeerId, remoteStream);
-      }
+
+      this.streamReceivedListeners.forEach(cb => cb(remotePeerId, remoteStream));
     });
 
     call.on('close', () => {
       console.log('📴 Call closed with:', remotePeerId);
       this.activeCalls.delete(remotePeerId);
       this.remoteStreams.delete(remotePeerId); // <-- NEW
-      
-      if (this.onCallEndedCallback) {
-        this.onCallEndedCallback(remotePeerId);
-      }
+
+      this.callEndedListeners.forEach(cb => cb(remotePeerId));
     });
 
     call.on('error', (error) => {
@@ -201,20 +196,16 @@ class PeerService {
       console.log('✅ Received stream from:', call.peer);
       this.activeCalls.set(call.peer, call);
       this.remoteStreams.set(call.peer, remoteStream); // <-- NEW
-      
-      if (this.onStreamReceivedCallback) {
-        this.onStreamReceivedCallback(call.peer, remoteStream);
-      }
+
+      this.streamReceivedListeners.forEach(cb => cb(call.peer, remoteStream));
     });
 
     call.on('close', () => {
       console.log('📴 Call closed with:', call.peer);
       this.activeCalls.delete(call.peer);
       this.remoteStreams.delete(call.peer); // <-- NEW
-      
-      if (this.onCallEndedCallback) {
-        this.onCallEndedCallback(call.peer);
-      }
+
+      this.callEndedListeners.forEach(cb => cb(call.peer));
     });
 
     call.on('error', (error) => {
@@ -278,17 +269,21 @@ class PeerService {
   /**
    * Set callback for when stream is received
    * @param {Function} callback 
+   * @returns {Function} unsubscribe
    */
   onStreamReceived(callback) {
-    this.onStreamReceivedCallback = callback;
+    this.streamReceivedListeners.add(callback);
+    return () => this.streamReceivedListeners.delete(callback);
   }
 
   /**
    * Set callback for when call ends
    * @param {Function} callback 
+   * @returns {Function} unsubscribe
    */
   onCallEnded(callback) {
-    this.onCallEndedCallback = callback;
+    this.callEndedListeners.add(callback);
+    return () => this.callEndedListeners.delete(callback);
   }
 
   /**
@@ -311,7 +306,7 @@ class PeerService {
    */
   destroy() {
     this.endAllCalls();
-    
+
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
@@ -321,6 +316,9 @@ class PeerService {
       this.peer.destroy();
       this.peer = null;
     }
+
+    this.streamReceivedListeners.clear();
+    this.callEndedListeners.clear();
   }
 }
 
