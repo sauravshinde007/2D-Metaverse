@@ -10,6 +10,19 @@ export const NotificationProvider = ({ children }) => {
         const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         setNotifications((prev) => [...prev, { id, message, type, duration }]);
 
+        // Sound Logic
+        try {
+            const soundFile = type === 'reminder'
+                ? '/assets/sounds/reminder.wav'
+                : '/assets/sounds/message-popup.wav';
+
+            const audio = new Audio(soundFile);
+            audio.volume = 0.5; // Reasonable volume
+            audio.play().catch(e => console.warn("Audio play failed (user interaction needed likely):", e));
+        } catch (err) {
+            console.error("Sound error:", err);
+        }
+
         setTimeout(() => {
             removeNotification(id);
         }, duration);
@@ -41,7 +54,8 @@ const NotificationItem = ({ type, message, onClose }) => {
         type === 'success' ? '#22c55e' : // Green-500
             type === 'error' ? '#ef4444' :   // Red-500
                 type === 'warning' ? '#f59e0b' : // Amber-500
-                    '#3b82f6';                       // Blue-500
+                    type === 'reminder' ? '#a855f7' : // Purple-500 for reminders
+                        '#3b82f6';                       // Blue-500
 
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
