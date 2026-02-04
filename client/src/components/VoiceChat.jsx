@@ -59,6 +59,7 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
       if (peerService.localStream && !isConnected) {
         setIsConnected(true);
       }
+
     }, 500);
 
     return () => {
@@ -66,18 +67,23 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
     };
   }, [isMuted, isConnected, setIsVideoEnabled]);
 
-  const toggleMute = () => {
-    const newMutedState = !isMuted;
-    peerService.setAudioMuted(newMutedState);
-    setIsMuted(newMutedState);
+  const toggleMute = async () => {
+    // Current state: isMuted (Audio OFF). 
+    // Target state: !isMuted (Audio ON).
+
+    // Logic: If currently muted (Audio OFF), we want to ENABLE.
+    const enable = isMuted;
+
+    await peerService.setAudioEnabled(enable);
+    setIsMuted(!enable);
   };
 
-  const toggleVideo = () => {
+  const toggleVideo = async () => {
     const newVideoState = !isVideoEnabled;
     // Set local state
     setIsVideoEnabled(newVideoState);
     // Tell peer service to enable/disable tracks
-    peerService.setVideoEnabled(newVideoState);
+    await peerService.setVideoEnabled(newVideoState);
 
     // Explicitly log the change for debugging
     console.log(`🎥 Toggled Video: ${newVideoState ? 'ON' : 'OFF'}`);
@@ -85,31 +91,28 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
   };
 
   // Robust media initialization
-  const initializeMedia = async (shouldEnableVideo = false) => {
+  const initializeMedia = async (constraints) => {
     try {
-      console.log('🎤 Initializing media...');
+      console.log('🎤 Initializing media...', constraints);
 
-      // Request both audio and video
-      await peerService.getUserMedia({
-        audio: true,
-        video: { width: 320, height: 240 } // Request low-res video
-      });
+      // Request media
+      await peerService.getUserMedia(constraints);
 
       setIsConnected(true);
 
-      // Set initial states
-      // Audio is on by default when joining
-      setIsMuted(false);
-      peerService.setAudioMuted(false);
+      // Set initial states based on what we requested
+      if (constraints.audio) {
+        setIsMuted(false);
+        // peerService.setAudioEnabled(true); // Already active from getUserMedia
+      } else {
+        setIsMuted(true);
+      }
 
-      // Video depends on which button was clicked
-      if (shouldEnableVideo) {
+      if (constraints.video) {
         setIsVideoEnabled(true);
-        peerService.setVideoEnabled(true);
         socketService.emitVideoStatus(true);
       } else {
         setIsVideoEnabled(false);
-        peerService.setVideoEnabled(false);
         socketService.emitVideoStatus(false);
       }
 
@@ -129,7 +132,8 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
   // Handlers for the buttons
   const handleMicClick = () => {
     if (!isConnected) {
-      initializeMedia(false); // Join with Audio only
+      // Join with Audio ONLY
+      initializeMedia({ audio: true });
     } else {
       toggleMute();
     }
@@ -137,7 +141,8 @@ export default function VoiceChat({ isVideoEnabled, setIsVideoEnabled }) {
 
   const handleVideoClick = () => {
     if (!isConnected) {
-      initializeMedia(true); // Join with Video + Audio
+      // Join with Video ONLY
+      initializeMedia({ video: { width: 320, height: 240 } });
     } else {
       toggleVideo();
     }

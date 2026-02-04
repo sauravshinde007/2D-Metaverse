@@ -127,10 +127,15 @@ export default function VideoGrid({ isVideoEnabled }) {
   }, []);
 
   useEffect(() => {
+    // When video is toggled, the tracks inside localStream change. 
+    // We create a new MediaStream reference to ensure React detects the update 
+    // and re-renders the video element with the new tracks.
     if (peerService.localStream) {
-      setLocalStream(peerService.localStream);
+      setLocalStream(new MediaStream(peerService.localStream.getTracks()));
+    } else {
+      setLocalStream(null);
     }
-  }, [isVideoEnabled]); // Update if this changes, though peerService stream is stable-ish
+  }, [isVideoEnabled]);
 
   useEffect(() => {
     const handleVideoStatus = ({ id, videoEnabled }) => {
@@ -232,12 +237,20 @@ export default function VideoGrid({ isVideoEnabled }) {
       {/*
         Render Local Video if:
         1. We are in proximity mode (rendering remote videos)
-        2. Local video is enabled
+        2. Local video is enabled (Self-view)
+        AND we have a valid local stream.
       */}
       {isProximityMode && isVideoEnabled && localStream && (
         <div className={`video-container ${isGridExiting ? 'exiting' : ''}`}>
           <video
-            ref={ref => { if (ref && ref.srcObject !== localStream) ref.srcObject = localStream; }}
+            ref={ref => {
+              if (ref && localStream) {
+                // Force update if srcObject is missing or different
+                if (ref.srcObject !== localStream) {
+                  ref.srcObject = localStream;
+                }
+              }
+            }}
             autoPlay
             playsInline
             muted // ALWAYS mute local video

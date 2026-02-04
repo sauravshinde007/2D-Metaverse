@@ -245,11 +245,75 @@ class PeerService {
    * Mute/unmute local audio
    * @param {boolean} muted 
    */
-  setAudioMuted(muted) {
-    if (this.localStream) {
+  // <-- NEW: Function to enable/disable audio with HARD STOP (Hardware check)
+  /**
+   * Enable/disable local audio
+   * @param {boolean} enabled 
+   */
+  async setAudioEnabled(enabled) {
+    if (!this.localStream) {
+      // If no stream exists yet, we create a placeholder stream if enabling
+      if (enabled) {
+        // This is a bit chicken-and-egg. Usually we initialize stream first.
+        // But let's assume valid flow is: user calls getUserMedia or we handle it here.
+        // If we don't have localStream, we can't add tracks.
+        // However, we can create one.
+        // For now, assume localStream exists (created by initialize or first action).
+        // If not, we might need to rely on the caller to start the stream.
+        // But let's fail gracefully or auto-init.
+      }
+      return;
+    }
+
+    if (enabled) {
+      // Check if we already have an active live audio track
+      const existingTrack = this.localStream.getAudioTracks()[0];
+      if (existingTrack && existingTrack.readyState === 'live') {
+        existingTrack.enabled = true;
+        return;
+      }
+
+      // Hardware Request
+      try {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const newAudioTrack = tempStream.getAudioTracks()[0];
+
+        this.localStream.addTrack(newAudioTrack);
+
+        // Update active calls
+        this.activeCalls.forEach(call => {
+          if (call.peerConnection) {
+            const senders = call.peerConnection.getSenders();
+            const audioSender = senders.find(s => s.track && s.track.kind === 'audio') ||
+              senders.find(s => !s.track && s.track === null); // Reuse empty?
+
+            if (audioSender) {
+              audioSender.replaceTrack(newAudioTrack).catch(e => console.error("Replace Audio Track failed", e));
+            } else {
+              // If we originally joined video-only, we might not have an audio sender.
+              // In this case, we'd need to addTrack. PeerJS docs say `call.peerConnection.addTrack`.
+              // But doing this mid-call requires renegotiation which PeerJS handles... poorly/manually.
+              // For now, assuming standard flow (join with at least one, or relying on replaceTrack).
+              // If sender doesn't exist, simple replace won't work.
+              // We'll log a warning.
+              console.warn("No audio sender found to replace.");
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Failed to enable audio:", err);
+      }
+
+    } else {
+      // HARD STOP
       this.localStream.getAudioTracks().forEach(track => {
-        track.enabled = !muted;
+        track.enabled = false;
+        track.stop();
+        this.localStream.removeTrack(track);
       });
+
+      // Notify peers?
+      // Optional: sender.replaceTrack(null)
     }
   }
 
@@ -258,10 +322,68 @@ class PeerService {
    * Enable/disable local video
    * @param {boolean} enabled 
    */
-  setVideoEnabled(enabled) {
-    if (this.localStream) {
+  async setVideoEnabled(enabled) {
+    if (!this.localStream) return;
+
+    if (enabled) {
+      // Check if we already have an active live video track
+      const existingTrack = this.localStream.getVideoTracks()[0];
+      if (existingTrack && existingTrack.readyState === 'live') {
+        existingTrack.enabled = true;
+        return;
+      }
+
+      // If no live track, we need to request a new one from hardware
+      try {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const newVideoTrack = tempStream.getVideoTracks()[0];
+
+        // Add to our persistent local stream
+        this.localStream.addTrack(newVideoTrack);
+
+        // Update all active peer connections
+        this.activeCalls.forEach(call => {
+          if (call.peerConnection) {
+            const senders = call.peerConnection.getSenders();
+            const videoSender = senders.find(s => s.track && s.track.kind === 'video') ||
+              senders.find(s => !s.track && s.track === null); // Reuse empty sender if one was stopped? No, usually track is just non-null.
+
+            if (videoSender) {
+              videoSender.replaceTrack(newVideoTrack).catch(err => console.error("ReplaceTrack failed", err));
+            } else {
+              // If we didn't have a video sender, we'd need to addTrack + renegotiate. 
+              // PeerJS makes renegotiation hard. 
+              // But since we start with video tracks (even if disabled), sender usually exists.
+              console.warn("No video sender found to replace track for peer:", call.peer);
+            }
+          }
+        });
+
+      } catch (err) {
+        console.error("Failed to enable video (hardware access):", err);
+      }
+
+    } else {
+      // Disable video = Stop hardware
       this.localStream.getVideoTracks().forEach(track => {
-        track.enabled = enabled;
+        track.enabled = false; // Logic signal
+        track.stop(); // Hardware signal (Light OFF)
+        this.localStream.removeTrack(track); // Allow GC
+      });
+
+      // Update peers to know we stopped sending?
+      // replaceTrack(null) is often used to stop sending but keep connection alive
+      this.activeCalls.forEach(call => {
+        if (call.peerConnection) {
+          const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender) {
+            // confusingly, if we just stop the track, the sender might still hold the reference to the dead track.
+            // We don't necessarily need to replace with null if the track is stopped, 
+            // but doing so is cleaner.
+            // sender.replaceTrack(null); 
+            // However, replaceTrack(null) might cause the other end to remove the track entirely.
+          }
+        }
       });
     }
   }
