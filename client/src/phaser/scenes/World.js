@@ -1291,26 +1291,33 @@ export default class WorldScene extends Phaser.Scene {
         const canvas = this.game.canvas;
         const rect = canvas.getBoundingClientRect();
 
-        // Calculate position: 
-        // camera.scrollX/Y affects worldToCamera results? No, worldToCamera(x,y) 
-        // actually gives relative to camera top-left.
-        // We need to factor in zoom.
-
         const cam = this.cameras.main;
-        const screenX = (this.player.x - cam.worldView.x) * cam.zoom;
-        const screenY = (this.player.y - cam.worldView.y) * cam.zoom;
+        const zoom = cam.zoom;
 
-        // Offset for video size (say 100x75)
-        const vidW = 120;
-        const vidH = 90;
+        // Calculate screen coordinates relative to viewport
+        const screenX = (this.player.x - cam.worldView.x) * zoom;
+        const screenY = (this.player.y - cam.worldView.y) * zoom;
 
-        videoExp.style.left = `${rect.left + screenX - (vidW / 2)}px`;
-        videoExp.style.top = `${rect.top + screenY - vidH - 60}px`; // 60px above center (roughly above head)
+        // Base dimensions at 1.0 zoom
+        const baseW = 80;
+        const baseH = 60;
+        const baseVOffset = 50; // Distance above player center to bottom of video
+
+        // Scaled dimensions
+        const curW = baseW * zoom;
+        const curH = baseH * zoom;
+        const curOffset = baseVOffset * zoom;
+
+        videoExp.style.width = `${curW}px`;
+        videoExp.style.height = `${curH}px`;
+
+        videoExp.style.left = `${rect.left + screenX - (curW / 2)}px`;
+        videoExp.style.top = `${rect.top + screenY - curH - curOffset}px`;
 
         // Only show if on screen
         if (
-          screenX < -vidW || screenX > cam.width + vidW ||
-          screenY < -vidH || screenY > cam.height + vidH
+          screenX < -curW || screenX > cam.width + curW ||
+          screenY < -curH || screenY > cam.height + curH
         ) {
           videoExp.style.display = 'none';
         } else {
@@ -1354,8 +1361,8 @@ export default class WorldScene extends Phaser.Scene {
       vid.muted = true;
       vid.playsInline = true;
       vid.style.position = "absolute";
-      vid.style.width = "120px";
-      vid.style.height = "90px";
+      vid.style.width = "80px";
+      vid.style.height = "60px";
       vid.style.objectFit = "cover";
       vid.style.borderRadius = "8px";
       vid.style.border = "2px solid #9b99fe";

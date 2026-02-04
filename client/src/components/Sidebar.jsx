@@ -1,21 +1,26 @@
-// client/src/components/Sidebar.jsx
-
 import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useChat } from '../context/ChatContext'
 import { useAuth } from '../context/AuthContext'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, CalendarDays } from 'lucide-react'
 import WorldChat from './WorldChat'
 import PrivateChatManager from './PrivateChatManager'
 import UserSettingsModal from './UserSettingsModal'
 import AdminPanel from './AdminPanel'
+import CalendarModal from './CalendarModal'
+import CalendarReminders from './CalendarReminders'
 
 export default function Sidebar() {
   const { chatClient, channel, isConnecting, unreadCounts, markAsRead } = useChat()
   const { logout, user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const [activePanel, setActivePanel] = useState(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isAdminOpen, setIsAdminOpen] = useState(false)
+
+  const isCalendarOpen = location.pathname === '/calendar'
 
   const togglePanel = (panelName) => {
     const newPanel = activePanel === panelName ? null : panelName
@@ -39,6 +44,7 @@ export default function Sidebar() {
 
   return (
     <>
+      <CalendarReminders />
       {/* Sidebar — SHARP box */}
       <div className="flex h-full w-16 flex-col items-center justify-between border border-zinc-800 bg-zinc-950/70 p-3 shadow-2xl backdrop-blur-xl relative z-[200]">
         <div className="flex flex-col items-center gap-3">
@@ -70,6 +76,14 @@ export default function Sidebar() {
             </svg>
             {/* Badge */}
             {unreadCounts.private > 0 && <Badge count={unreadCounts.private} />}
+          </RoundedIconButton>
+
+          <RoundedIconButton
+            active={isCalendarOpen}
+            title="Calendar"
+            onClick={() => navigate('/calendar')}
+          >
+            <CalendarDays size={24} />
           </RoundedIconButton>
 
           <RoundedIconButton
@@ -130,6 +144,12 @@ export default function Sidebar() {
       <UserSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Calendar Modal */}
+      <CalendarModal
+        isOpen={isCalendarOpen}
+        onClose={() => navigate('/metaverse')}
       />
 
       {/* Admin Panel */}

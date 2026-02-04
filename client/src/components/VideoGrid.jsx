@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import peerService from '../services/peerService';
 import socketService from '../services/socketService';
 import '../styles/videogrid.css';
@@ -19,7 +19,7 @@ function getUsernameFromPeerId(peerId) {
   return peerId.slice(0, 6) + '...';
 }
 
-const VideoPlayer = ({ stream, peerId, isVideoEnabledBySignaling, isExiting }) => {
+const VideoPlayer = ({ stream, peerId, isVideoEnabledBySignaling, isExiting, onVisibilityChange }) => {
   const videoRef = useRef(null);
   const [hasVideo, setHasVideo] = useState(false);
   const username = getUsernameFromPeerId(peerId);
@@ -77,6 +77,9 @@ const VideoPlayer = ({ stream, peerId, isVideoEnabledBySignaling, isExiting }) =
       });
     };
   }, [stream, isVideoEnabledBySignaling]);
+  useEffect(() => {
+    onVisibilityChange(peerId, hasVideo);
+  }, [hasVideo, peerId, onVisibilityChange]);
 
   // 2. Attach stream to DOM when visible
   useEffect(() => {
@@ -113,12 +116,26 @@ export default function VideoGrid({ isVideoEnabled }) {
   const [displayStreams, setDisplayStreams] = useState([]); // { peerId, stream, isExiting, exitStart }
   const [videoStatusMap, setVideoStatusMap] = useState({});
   const [localStream, setLocalStream] = useState(null);
+  const visiblePeersRef = useRef(new Set());
+
+  const handleVisibilityChange = useCallback((peerId, isVisible) => {
+    if (isVisible) {
+      visiblePeersRef.current.add(peerId);
+    } else {
+      visiblePeersRef.current.delete(peerId);
+    }
+  }, []);
 
   useEffect(() => {
+    // When video is toggled, the tracks inside localStream change. 
+    // We create a new MediaStream reference to ensure React detects the update 
+    // and re-renders the video element with the new tracks.
     if (peerService.localStream) {
-      setLocalStream(peerService.localStream);
+      setLocalStream(new MediaStream(peerService.localStream.getTracks()));
+    } else {
+      setLocalStream(null);
     }
-  }, [isVideoEnabled]); // Update if this changes, though peerService stream is stable-ish
+  }, [isVideoEnabled]);
 
   useEffect(() => {
     const handleVideoStatus = ({ id, videoEnabled }) => {
@@ -176,8 +193,12 @@ export default function VideoGrid({ isVideoEnabled }) {
                 hasChanges = true;
               }
             } else {
-              // Newly missing. Mark exiting.
-              next.push({ ...item, isExiting: true, exitStart: now });
+              // Newly missing.
+              // ONLY animate exit if the video was actually visible!
+              if (visiblePeersRef.current.has(item.peerId)) {
+                next.push({ ...item, isExiting: true, exitStart: now });
+              }
+              // If not visible, we just drop it (don't push to next) which equals "instant remove"
               hasChanges = true;
             }
           }
@@ -216,12 +237,20 @@ export default function VideoGrid({ isVideoEnabled }) {
       {/*
         Render Local Video if:
         1. We are in proximity mode (rendering remote videos)
-        2. Local video is enabled
+        2. Local video is enabled (Self-view)
+        AND we have a valid local stream.
       */}
       {isProximityMode && isVideoEnabled && localStream && (
         <div className={`video-container ${isGridExiting ? 'exiting' : ''}`}>
           <video
-            ref={ref => { if (ref && ref.srcObject !== localStream) ref.srcObject = localStream; }}
+            ref={ref => {
+              if (ref && localStream) {
+                // Force update if srcObject is missing or different
+                if (ref.srcObject !== localStream) {
+                  ref.srcObject = localStream;
+                }
+              }
+            }}
             autoPlay
             playsInline
             muted // ALWAYS mute local video
@@ -239,6 +268,7 @@ export default function VideoGrid({ isVideoEnabled }) {
           stream={stream}
           isVideoEnabledBySignaling={!!videoStatusMap[peerId]}
           isExiting={isExiting}
+          onVisibilityChange={handleVisibilityChange}
         />
       ))}
     </div>

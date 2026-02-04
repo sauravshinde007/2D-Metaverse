@@ -6,8 +6,11 @@ import socketService from '../services/socketService'; // ✅ fixed path
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
   const login = useCallback((userData, userToken) => {
     setToken(userToken);
@@ -41,11 +44,8 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem('user');
 
       if (storedToken) {
-        // 1. Optimistically load from localStorage first (fast render)
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-          setToken(storedToken);
-        }
+        // 1. State is already optimistically set by lazy init
+
 
         // 2. Background fetch to get FRESH data (fix stale avatar issues)
         try {

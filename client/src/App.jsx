@@ -70,6 +70,10 @@ function App() {
                         path="/metaverse"
                         element={isAuthenticated ? <Metaverse /> : <Navigate to="/login" />}
                     />
+                    <Route
+                        path="/calendar"
+                        element={isAuthenticated ? <Metaverse /> : <Navigate to="/login" />}
+                    />
                 </Routes>
             </Router>
         </NotificationProvider>
