@@ -8,13 +8,20 @@ const ANIMATION_DURATION = 300; // ms, matches CSS
 
 function getUsernameFromPeerId(peerId) {
   try {
-    const worldScene = window._phaserGame?.scene.getScene('WorldScene');
-    if (worldScene && worldScene.playerUsernames) {
-      const username = worldScene.playerUsernames.get(peerId);
-      return username || peerId.slice(0, 6) + '...';
+    const game = window._phaserGame;
+    if (!game) return peerId.slice(0, 6) + '...';
+
+    const worldScene = game.scene.getScene('WorldScene');
+    if (worldScene && worldScene.playerManager) {
+      // Try fuzzy match using sanitized ID
+      for (const [socketId, name] of worldScene.playerManager.playerUsernames.entries()) {
+        if (peerService.getPeerId(socketId) === peerId) {
+          return name;
+        }
+      }
     }
   } catch (e) {
-    console.error("Error getting username from Phaser scene:", e);
+    console.error("Error getting username:", e);
   }
   return peerId.slice(0, 6) + '...';
 }
@@ -127,21 +134,37 @@ export default function VideoGrid({ isVideoEnabled }) {
   }, []);
 
   useEffect(() => {
-    // When video is toggled, the tracks inside localStream change. 
-    // We create a new MediaStream reference to ensure React detects the update 
-    // and re-renders the video element with the new tracks.
-    if (peerService.localStream) {
-      setLocalStream(new MediaStream(peerService.localStream.getTracks()));
-    } else {
-      setLocalStream(null);
-    }
+    const updateLocalStream = () => {
+      if (peerService.localStream) {
+        console.log("VideoGrid: Updating local stream tracks:", peerService.localStream.getTracks().map(t => `${t.kind}:${t.readyState}:${t.enabled}`));
+        // Only set non-null if we actually have video tracks (if video is enabled)
+        // Or just pass it and let video element handle blankness?
+        // Creating new MediaStream forces React to re-eval the ref.
+        setLocalStream(new MediaStream(peerService.localStream.getTracks()));
+      } else {
+        setLocalStream(null);
+      }
+    };
+
+    // Initial check
+    updateLocalStream();
+
+    // Subscribe to updates
+    const unsubscribe = peerService.onLocalStreamUpdated(() => {
+      updateLocalStream();
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [isVideoEnabled]);
 
   useEffect(() => {
     const handleVideoStatus = ({ id, videoEnabled }) => {
+      const peerId = peerService.getPeerId(id);
       setVideoStatusMap(prev => ({
         ...prev,
-        [id]: videoEnabled
+        [peerId]: videoEnabled
       }));
     };
 
@@ -245,10 +268,7 @@ export default function VideoGrid({ isVideoEnabled }) {
           <video
             ref={ref => {
               if (ref && localStream) {
-                // Force update if srcObject is missing or different
-                if (ref.srcObject !== localStream) {
-                  ref.srcObject = localStream;
-                }
+                ref.srcObject = localStream;
               }
             }}
             autoPlay

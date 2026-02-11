@@ -1,0 +1,356 @@
+
+import Phaser from "phaser";
+
+export default class PlayerManager {
+    constructor(scene, inputManager, mapManager) {
+        this.scene = scene;
+        this.inputManager = inputManager;
+        this.mapManager = mapManager;
+
+        this.player = null; // Local player sprite
+        this.playerUsernameText = null;
+
+        this.players = {}; // Remote player containers
+        this.playerUsernames = new Map(); // id -> username
+
+        this.movement = { up: false, down: false, left: false, right: false };
+        this.lastDirection = "down";
+        this.currentAnimation = "idle-down";
+
+        // Joystick
+        this.joystickBase = null;
+        this.joystickThumb = null;
+        this.joystickActive = false;
+        this.joystickDirection = { up: false, down: false, left: false, right: false };
+
+        // Events
+        this.scene.events.on("gameInput", (input) => this.handleGameInput(input));
+    }
+
+    createAnimations() {
+        const anims = this.scene.anims;
+        // Idle
+        anims.create({ key: "idle-right", frames: anims.generateFrameNumbers("ash", { start: 0, end: 5 }), repeat: -1, frameRate: 15 });
+        anims.create({ key: "idle-up", frames: anims.generateFrameNumbers("ash", { start: 6, end: 11 }), repeat: -1, frameRate: 15 });
+        anims.create({ key: "idle-left", frames: anims.generateFrameNumbers("ash", { start: 12, end: 17 }), repeat: -1, frameRate: 15 });
+        anims.create({ key: "idle-down", frames: anims.generateFrameNumbers("ash", { start: 18, end: 23 }), repeat: -1, frameRate: 15 });
+        // Walk
+        anims.create({ key: "walk-right", frames: anims.generateFrameNumbers("ash", { start: 24, end: 29 }), frameRate: 10, repeat: -1 });
+        anims.create({ key: "walk-up", frames: anims.generateFrameNumbers("ash", { start: 30, end: 35 }), frameRate: 10, repeat: -1 });
+        anims.create({ key: "walk-left", frames: anims.generateFrameNumbers("ash", { start: 36, end: 41 }), frameRate: 10, repeat: -1 });
+        anims.create({ key: "walk-down", frames: anims.generateFrameNumbers("ash", { start: 42, end: 47 }), frameRate: 15, repeat: -1 });
+    }
+
+    createLocalPlayer(x, y, username) {
+        this.player = this.scene.physics.add.sprite(x, y, "ash");
+        this.playerUsernameText = this.scene.add
+            .text(x, y - 30, "You", {
+                fontFamily: 'Inter',
+                fontSize: "14px", fill: "#90EE90", fontStyle: "bold",
+                stroke: "#000000", strokeThickness: 3,
+            })
+            .setOrigin(0.5)
+            .setResolution(2);
+
+        // Glow
+        const localGlow = this.player.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+        localGlow.setActive(false);
+        this.player.setInteractive();
+        this.player.on('pointerover', () => localGlow.setActive(true));
+        this.player.on('pointerout', () => localGlow.setActive(false));
+
+        this.player.setDepth(5);
+        this.playerUsernameText.setDepth(6);
+        this.player.setCollideWorldBounds(true);
+
+        // Colliders
+        if (this.mapManager.layers.walls) this.scene.physics.add.collider(this.player, this.mapManager.layers.walls);
+        if (this.mapManager.layers.props) this.scene.physics.add.collider(this.player, this.mapManager.layers.props);
+
+        this.createMobileJoystick();
+    }
+
+    addOtherPlayer(id, data) {
+        if (this.players[id]) this.players[id].destroy();
+
+        const sprite = this.scene.add.sprite(0, 0, "ash");
+        const nameText = this.scene.add.text(0, -30, data.username, {
+            fontFamily: 'Inter',
+            fontSize: "14px", fill: "#ffffff", fontStyle: "bold",
+            stroke: "#000000", strokeThickness: 3,
+        })
+            .setOrigin(0.5)
+            .setResolution(2);
+
+        const container = this.scene.add.container(data.x, data.y, [sprite, nameText]);
+
+        // Glow
+        const remoteGlow = sprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+        remoteGlow.setActive(false);
+        sprite.setInteractive();
+        sprite.on('pointerover', () => remoteGlow.setActive(true));
+        sprite.on('pointerout', () => remoteGlow.setActive(false));
+
+        container.setDepth(5);
+        if (data.anim) sprite.anims.play(data.anim, true);
+        else sprite.setFrame(18);
+
+        this.players[id] = container;
+        this.playerUsernames.set(id, data.username);
+    }
+
+    removePlayer(id) {
+        if (this.players[id]) {
+            this.players[id].destroy();
+            delete this.players[id];
+            this.playerUsernames.delete(id);
+        }
+    }
+
+    moveRemotePlayer(id, pos, anim) {
+        const container = this.players[id];
+        if (container) {
+            this.scene.tweens.add({
+                targets: container,
+                x: pos.x,
+                y: pos.y,
+                duration: 120,
+                ease: "Linear",
+            });
+            const sprite = container.getAt(0);
+            if (anim && sprite.anims) sprite.anims.play(anim, true);
+        }
+    }
+
+    handleGameInput(input) {
+        const { type, action } = input;
+        const isDown = type === "keydown";
+
+        switch (action) {
+            case "MOVE_UP": this.movement.up = isDown; break;
+            case "MOVE_DOWN": this.movement.down = isDown; break;
+            case "MOVE_LEFT": this.movement.left = isDown; break;
+            case "MOVE_RIGHT": this.movement.right = isDown; break;
+            case "INTERACT": if (isDown) console.log("Player interaction"); break;
+        }
+    }
+
+    update(myRole) {
+        if (!this.player || !this.player.body) return;
+
+        // Chat Focus check
+        if (this.inputManager.chatFocused) {
+            this.player.body.setVelocity(0);
+            this.stopAnimation();
+            return;
+        }
+
+        // RBAC Check
+        const access = this.mapManager.checkZoneAccess(this.player, myRole);
+        if (!access.allowed && access.zone) {
+            const zone = access.zone;
+            const centerX = zone.x + zone.width / 2;
+            const centerY = zone.y + zone.height / 2;
+            const angle = Phaser.Math.Angle.Between(centerX, centerY, this.player.x, this.player.y);
+            this.player.x += Math.cos(angle) * 5;
+            this.player.y += Math.sin(angle) * 5;
+            this.showAccessDenied(zone.name);
+        }
+
+        // Movement
+        const speed = 200;
+        this.player.body.setVelocity(0);
+
+        let dx = 0;
+        let dy = 0;
+
+        if (this.movement.left) dx = -1;
+        else if (this.movement.right) dx = 1;
+        if (this.movement.up) dy = -1;
+        else if (this.movement.down) dy = 1;
+
+        this.player.body.setVelocityX(dx * speed);
+        this.player.body.setVelocityY(dy * speed);
+        this.player.body.velocity.normalize().scale(speed);
+
+        // Resume Camera Follow if moving
+        if (dx !== 0 || dy !== 0) {
+            this.scene.cameraManager.checkResumeFollow(dx, dy);
+        }
+
+        // Animation
+        if (this.player.body.velocity.x < 0) {
+            this.currentAnimation = "walk-left";
+            this.lastDirection = "left";
+        } else if (this.player.body.velocity.x > 0) {
+            this.currentAnimation = "walk-right";
+            this.lastDirection = "right";
+        } else if (this.player.body.velocity.y < 0) {
+            this.currentAnimation = "walk-up";
+            this.lastDirection = "up";
+        } else if (this.player.body.velocity.y > 0) {
+            this.currentAnimation = "walk-down";
+            this.lastDirection = "down";
+        } else {
+            this.currentAnimation = `idle-${this.lastDirection}`;
+        }
+
+        this.player.anims.play(this.currentAnimation, true);
+
+        // Update Username Text
+        this.playerUsernameText.setPosition(this.player.x, this.player.y - 30);
+
+        // 📡 Dispatch Minimap Data
+        const otherPlayers = Object.keys(this.players).map(id => ({
+            id,
+            x: this.players[id].x,
+            y: this.players[id].y
+        }));
+
+        window.dispatchEvent(new CustomEvent('minimap-update', {
+            detail: {
+                me: { x: this.player.x, y: this.player.y },
+                others: otherPlayers
+            }
+        }));
+    }
+
+    stopAnimation() {
+        this.movement = { up: false, down: false, left: false, right: false };
+        const idleAnim = `idle-${this.lastDirection}`;
+        if (this.currentAnimation !== idleAnim) {
+            this.currentAnimation = idleAnim;
+            this.player.anims.play(this.currentAnimation, true);
+        }
+    }
+
+    showAccessDenied(zoneName) {
+        if (this._lastWarning && Date.now() - this._lastWarning < 1000) return;
+        this._lastWarning = Date.now();
+
+        const toast = this.scene.add.text(this.player.x, this.player.y - 60, `🔒 Access to ${zoneName} Denied`, {
+            fontFamily: 'Inter',
+            fontSize: '16px', fontStyle: 'bold',
+            fill: '#ff0000', stroke: '#ffffff', strokeThickness: 4,
+            backgroundColor: '#00000088',
+            padding: { x: 10, y: 5 }
+        }).setOrigin(0.5).setDepth(100).setResolution(2);
+
+        this.scene.tweens.add({
+            targets: toast,
+            y: toast.y - 50,
+            alpha: 0,
+            duration: 1500,
+            onComplete: () => toast.destroy()
+        });
+    }
+
+    showReaction(targetSprite, emoji) {
+        if (!targetSprite) return;
+        const x = targetSprite.x;
+        const y = targetSprite.y - 50;
+
+        const emojiText = this.scene.add.text(x, y, emoji, {
+            fontFamily: 'Inter', fontSize: "32px",
+        }).setOrigin(0.5).setDepth(100).setResolution(2);
+
+        this.scene.tweens.add({
+            targets: emojiText,
+            y: y - 40,
+            alpha: 0,
+            duration: 2000,
+            ease: "Power1",
+            onComplete: () => emojiText.destroy()
+        });
+    }
+
+    // --- Mobile Joystick ---
+    isMobileDevice() {
+        const device = this.scene.sys.game.device;
+        const smallScreen = window.innerWidth <= 768;
+        return !device.os.desktop || smallScreen;
+    }
+
+    createMobileJoystick() {
+        if (!this.isMobileDevice()) return;
+
+        const radius = 50;
+        const thumbRadius = 25;
+        this.joystickBase = this.scene.add.circle(0, 0, radius, 0x000000, 0.25).setScrollFactor(0).setDepth(1000).setVisible(false);
+        this.joystickThumb = this.scene.add.circle(0, 0, thumbRadius, 0xffffff, 0.7).setScrollFactor(0).setDepth(1001).setVisible(false);
+
+        this.scene.input.on("pointerdown", (pointer) => {
+            if (!this.isMobileDevice() || this.inputManager.chatFocused) return;
+            if (pointer.x > this.scene.cameras.main.width / 2) return;
+
+            this.joystickActive = true;
+            this.joystickBase.setPosition(pointer.x, pointer.y).setVisible(true);
+            this.joystickThumb.setPosition(pointer.x, pointer.y).setVisible(true);
+            this.updateJoystick(pointer);
+        });
+
+        this.scene.input.on("pointermove", (pointer) => {
+            if (this.joystickActive) this.updateJoystick(pointer);
+        });
+
+        this.scene.input.on("pointerup", () => {
+            if (this.joystickActive) {
+                this.joystickActive = false;
+                this.joystickBase.setVisible(false);
+                this.joystickThumb.setVisible(false);
+                this.applyJoystickDir({ up: false, down: false, left: false, right: false });
+            }
+        });
+    }
+
+    updateJoystick(pointer) {
+        const baseX = this.joystickBase.x;
+        const baseY = this.joystickBase.y;
+        const dx = pointer.x - baseX;
+        const dy = pointer.y - baseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxDist = 60;
+
+        let offsetX = dx, offsetY = dy;
+        if (dist > maxDist) {
+            const scale = maxDist / dist;
+            offsetX = dx * scale;
+            offsetY = dy * scale;
+        }
+        this.joystickThumb.setPosition(baseX + offsetX, baseY + offsetY);
+
+        const deadZone = 10;
+        if (dist < deadZone) {
+            this.applyJoystickDir({ up: false, down: false, left: false, right: false });
+            return;
+        }
+
+        const dir = { up: false, down: false, left: false, right: false };
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx < -deadZone) dir.left = true;
+            else if (dx > deadZone) dir.right = true;
+        } else {
+            if (dy < -deadZone) dir.up = true;
+            else if (dy > deadZone) dir.down = true;
+        }
+        this.applyJoystickDir(dir);
+    }
+
+    applyJoystickDir(newDir) {
+        const prev = this.joystickDirection;
+        const emit = (type, action) => {
+            this.handleGameInput({ type, action });
+        };
+
+        if (newDir.up && !prev.up) emit("keydown", "MOVE_UP");
+        if (!newDir.up && prev.up) emit("keyup", "MOVE_UP");
+        if (newDir.down && !prev.down) emit("keydown", "MOVE_DOWN");
+        if (!newDir.down && prev.down) emit("keyup", "MOVE_DOWN");
+        if (newDir.left && !prev.left) emit("keydown", "MOVE_LEFT");
+        if (!newDir.left && prev.left) emit("keyup", "MOVE_LEFT");
+        if (newDir.right && !prev.right) emit("keydown", "MOVE_RIGHT");
+        if (!newDir.right && prev.right) emit("keyup", "MOVE_RIGHT");
+
+        this.joystickDirection = newDir;
+    }
+}
