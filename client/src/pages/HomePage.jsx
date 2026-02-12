@@ -8,114 +8,124 @@ import { cn } from '../lib/utils'                                   // fixed pat
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen relative bg-gradient-to-b from-[#14141a] via-[#0d0d14] to-black text-[#e6e7ea] overflow-hidden">
-      {/* Floating blobs */}
-      <div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
-        <div className="absolute left-[-8rem] top-[-8rem] w-96 h-96 rounded-[40%_60%_60%_40%] bg-gradient-to-tr from-[#505081] to-[#7272e0] opacity-40 blur-[30px] animate-blob-slow" />
-        <div className="absolute right-[-6rem] bottom-[-6rem] w-72 h-72 rounded-[30%_70%_70%_30%] bg-gradient-to-br from-[#44466f] to-[#8b8be0] opacity-35 blur-[28px] animate-blob-fast" />
+    <div className="min-h-screen relative bg-black text-[#e6e7ea] overflow-hidden">
+      {/* Background Gradients */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+        {/* Cyan/Teal glow - Higher and brighter */}
+        <div className="absolute bottom-[-5%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#00ffff] opacity-[0.35] blur-[160px]" />
+        {/* Blue/Indigo glow - Higher and with more presence */}
+        <div className="absolute bottom-[-5%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#0044ff] opacity-[0.4] blur-[160px]" />
       </div>
 
       <Header />
 
       {/* Hero main */}
-      <main className="relative z-10">
-        <div className="mx-auto max-w-7xl px-6 py-28 md:py-36">
-          <div className="text-center lg:text-left lg:flex lg:items-center lg:gap-12">
-            <div className="lg:flex-1">
-              <AnimatedGroup
-                className="space-y-6"
-                variants={{
-                  container: {
-                    hidden: { opacity: 0 },
-                    visible: {
-                      opacity: 1,
-                      transition: { staggerChildren: 0.08, delayChildren: 0.3 },
-                    },
-                  },
-                  item: {
-                    hidden: { opacity: 0, y: 16 },
-                    visible: {
-                      opacity: 1,
-                      y: 0,
-                      transition: { type: 'spring', bounce: 0.2, duration: 1.2 },
-                    },
-                  },
-                }}
-              >
-                <h1 className="mx-auto max-w-3xl text-4xl md:text-6xl font-extrabold leading-tight">
-                  Metaverse for{' '}
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#9b99fe] to-[#2bc8b7]">
-                    Remote Collaborations
-                  </span>
-                </h1>
+      <main className="relative z-10 pt-32 pb-16">
+        <div className="mx-auto max-w-7xl px-6 flex flex-col items-center text-center">
 
-                <p className="mx-auto max-w-2xl text-lg text-zinc-300">
-                  Build collaborative virtual spaces and modern web experiences with composable UI,
-                  realtime features, and tools that fit your workflow.
-                </p>
+          <AnimatedGroup
+            className="flex flex-col items-center"
+            variants={{
+              container: {
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+                },
+              },
+              item: {
+                hidden: { opacity: 0, y: 20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { type: 'spring', bounce: 0.4, duration: 1.0 },
+                },
+              },
+            }}
+          >
+            {/* Pill */}
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-4 py-1.5 text-sm text-zinc-300 backdrop-blur-sm hover:border-zinc-700 transition cursor-default">
+              <span className="flex h-2 w-2 rounded-full bg-[#9b99fe] animate-pulse"></span>
+              <span>Join the revolution today</span>
+              <span className="text-zinc-500 ml-1">→</span>
+            </div>
 
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-start sm:items-center">
-                  <div className="rounded-xl bg-gradient-to-b from-white/90 to-white/80 p-0.5 inline-block">
-                    <Button as="link" to="/signup" variant="primary" className="px-6">
-                      Get Started
-                    </Button>
+            {/* Title */}
+            <h1 className="mx-auto max-w-5xl text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
+              Metaverse for <br className="hidden md:block" />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#9b99fe] to-[#2bc8b7]">
+                Remote Collaborations
+              </span>
+            </h1>
+
+            {/* Description */}
+            <p className="mx-auto max-w-3xl text-lg md:text-xl text-zinc-400 mb-10 leading-relaxed">
+              Build collaborative virtual spaces and modern web experiences with composable UI,
+              realtime features, and tools that fit your workflow.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+              <Button as="link" to="/signup" variant="primary" className="h-12 px-8 text-base rounded-full hover:scale-105 active:scale-95 transition-transform duration-200">
+                Start Your Free Trial
+              </Button>
+              <Button as="link" to="/login" variant="ghost" className="h-12 px-8 text-base rounded-full border border-zinc-700 hover:bg-zinc-800 hover:text-white transition-colors">
+                Watch Demo
+              </Button>
+            </div>
+          </AnimatedGroup>
+
+          {/* Large Preview Image */}
+          <AnimatedGroup
+            className="mt-20 w-full max-w-6xl"
+            variants={{
+              container: { hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0 } },
+              item: { hidden: { opacity: 0, scale: 0.95 }, visible: { opacity: 1, scale: 1, transition: { duration: 1.2, ease: "easeOut" } } },
+            }}
+          >
+            <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-2 shadow-2xl backdrop-blur-md">
+              <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-zinc-500/50 to-transparent opacity-50" />
+              <img
+                src="/assets/screenshot.png"
+                alt="App Dashboard"
+                className="hidden dark:block w-full rounded-xl shadow-inner border border-zinc-700/50"
+              />
+              <img
+                src="/assets/screenshot.png"
+                alt="App Dashboard Light"
+                className="block dark:hidden w-full rounded-xl shadow-inner border border-zinc-200"
+              />
+            </div>
+          </AnimatedGroup>
+
+          {/* Trusted by Logos */}
+          <section className="mt-24 w-full border-t border-zinc-800/50 pt-10">
+            <div className="mx-auto max-w-5xl px-6 text-center">
+              <div className="mb-8 text-sm font-medium text-zinc-500 uppercase tracking-widest">Trusted by industry leaders</div>
+              <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8 opacity-70 grayscale hover:grayscale-0 transition-all duration-500">
+                {[
+                  'https://html.tailus.io/blocks/customers/nvidia.svg',
+                  'https://html.tailus.io/blocks/customers/column.svg',
+                  'https://html.tailus.io/blocks/customers/github.svg',
+                  'https://html.tailus.io/blocks/customers/nike.svg',
+                  'https://html.tailus.io/blocks/customers/lemonsqueezy.svg',
+                  'https://html.tailus.io/blocks/customers/laravel.svg',
+                  'https://html.tailus.io/blocks/customers/lilly.svg',
+                  'https://html.tailus.io/blocks/customers/openai.svg',
+                ].map((src, i) => (
+                  <div key={i} className="flex items-center justify-center">
+                    <img
+                      src={src}
+                      alt={`logo-${i}`}
+                      className="h-7 w-auto object-contain invert"
+                    />
                   </div>
-                </div>
-              </AnimatedGroup>
-            </div>
-
-            {/* Right-side preview card */}
-            <AnimatedGroup
-              className="mt-12 lg:mt-0 lg:w-1/2"
-              variants={{
-                container: { hidden: { opacity: 0 }, visible: { opacity: 1 } },
-                item: { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } },
-              }}
-            >
-              <div className="relative mx-auto max-w-3xl lg:mx-0 lg:max-w-none">
-                <div className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900/60 to-transparent p-3 shadow-lg">
-                  <img
-                    src="/assets/screenshot.png"
-                    alt="app preview"
-                    className="hidden dark:block w-full rounded-xl object-cover"
-                  />
-                  <img
-                    src="/assets/screenshot.png"
-                    alt="app preview light"
-                    className="block dark:hidden w-full rounded-xl object-cover"
-                  />
-                </div>
+                ))}
               </div>
-            </AnimatedGroup>
-          </div>
-        </div>
-
-        {/* Customers / logos row */}
-        <section className="bg-zinc-900/60 py-10 mt-8">
-          <div className="mx-auto max-w-5xl px-6 text-center">
-            <div className="mb-6 text-sm">Trusted by</div>
-            <div className="grid grid-cols-4 gap-8 items-center justify-center sm:grid-cols-8">
-              {[
-                'https://html.tailus.io/blocks/customers/nvidia.svg',
-                'https://html.tailus.io/blocks/customers/column.svg',
-                'https://html.tailus.io/blocks/customers/github.svg',
-                'https://html.tailus.io/blocks/customers/nike.svg',
-                'https://html.tailus.io/blocks/customers/lemonsqueezy.svg',
-                'https://html.tailus.io/blocks/customers/laravel.svg',
-                'https://html.tailus.io/blocks/customers/lilly.svg',
-                'https://html.tailus.io/blocks/customers/openai.svg',
-              ].map((src, i) => (
-                <div key={i} className="flex items-center justify-center">
-                  <img
-                    src={src}
-                    alt={`logo-${i}`}
-                    className="h-6 object-contain invert dark:invert-0"
-                  />
-                </div>
-              ))}
             </div>
-          </div>
-        </section>
+          </section>
+
+        </div>
       </main>
     </div>
   )
@@ -135,23 +145,19 @@ function Header() {
     <header className="fixed top-4 left-0 right-0 z-30 px-4">
       <div
         className={cn(
-          'mx-auto max-w-7xl flex items-center justify-between gap-4 rounded-2xl transition-all duration-200 border p-3',
+          'mx-auto flex items-center justify-between gap-4 rounded-2xl transition-all duration-300 border p-3 ease-in-out',
           scrolled
-            ? 'bg-zinc-900/70 border-zinc-800 shadow-lg'
-            : 'bg-zinc-900/35 border-zinc-700/70'
+            ? 'bg-zinc-900/80 border-zinc-700 shadow-xl max-w-4xl backdrop-blur-md'
+            : 'bg-zinc-900/35 border-zinc-700/70 max-w-7xl backdrop-blur-sm'
         )}
       >
         {/* Logo / brand - properly aligned */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#9b99fe] to-[#2bc8b7] shadow-md">
-            <span className="text-sm font-bold text-black">M</span>
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-wide">Metaverse</span>
-            <span className="text-[10px] text-zinc-400 hidden sm:block">
-              Remote Collaboration
-            </span>
-          </div>
+          <img
+            src="/logos/logowText-cropped.svg"
+            alt="Metaverse"
+            className="h-7 w-auto object-contain"
+          />
         </Link>
 
         {/* Desktop nav */}
