@@ -11,18 +11,50 @@ export default class CameraManager {
     }
 
     create(mapWidth, mapHeight) {
+        this.mapWidth = mapWidth;
+        this.mapHeight = mapHeight;
+
         const cam = this.scene.cameras.main;
         cam.setBounds(0, 0, mapWidth, mapHeight);
 
-        // Initial Zoom
-        if (this.isMobileDevice()) {
-            cam.setZoom(1.0);
-        } else {
-            cam.setZoom(1.5);
-        }
+        // Initial Zoom Logic
+        this.updateMinZoom(); // Calculate limit first
+        let startZoom = this.isMobileDevice() ? 1.0 : 1.5;
+        startZoom = Math.max(startZoom, this.minZoom); // Enforce limit
+
+        cam.setZoom(startZoom);
 
         this.setupInputs();
         this.setupUIListeners();
+
+        // Listen for resize to update limits
+        this.scene.scale.on('resize', this.onResize, this);
+    }
+
+    onResize(gameSize) {
+        this.updateMinZoom();
+        // Force re-clamp current zoom
+        const cam = this.scene.cameras.main;
+        if (cam.zoom < this.minZoom) {
+            cam.setZoom(this.minZoom);
+        }
+    }
+
+    updateMinZoom() {
+        if (!this.mapWidth || !this.mapHeight) return;
+
+        const cam = this.scene.cameras.main;
+        // Calculate the zoom level where the viewport fits exactly inside the map
+        const minZoomX = cam.width / this.mapWidth;
+        const minZoomY = cam.height / this.mapHeight;
+
+        // We must be zoomed in enough so NEITHER dimension shows white space
+        // So we take the MAX of the required zooms
+        this.minZoom = Math.max(minZoomX, minZoomY);
+
+        // Safety: If map is smaller than screen, minZoom might be > 1. 
+        // If map is huge, minZoom is small (e.g. 0.2).
+        // Let's cap max zoom at 3.0 as before.
     }
 
     isMobileDevice() {
@@ -43,10 +75,10 @@ export default class CameraManager {
     setupInputs() {
         const cam = this.scene.cameras.main;
 
-        // Mouse Drag to Pan
+        // Mouse Drag ... (existing code logic is fine, but let's just replace the wheel part here or reuse existing)
+        // ... (I will keep your existing input setup mostly, but update the Wheel part)
+
         this.scene.input.on('pointerdown', (pointer) => {
-            // Only left click (0) and ensure we are not on UI if that was checked elsewhere,
-            // but here we just check button.
             if (pointer.button === 0) {
                 this.stopFollow();
                 this.isDragging = true;
@@ -66,7 +98,6 @@ export default class CameraManager {
                     return;
                 }
                 const zoom = cam.zoom;
-                // Calculate diff in WORLD units
                 const diffX = (pointer.x - this.dragStart.x) / zoom;
                 const diffY = (pointer.y - this.dragStart.y) / zoom;
 
@@ -87,7 +118,16 @@ export default class CameraManager {
 
         // Wheel Zoom
         this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
-            this.adjustZoom(deltaY > 0 ? -0.3 : 0.3);
+            // Determine direction
+            const direction = deltaY > 0 ? -1 : 1;
+            const zoomAmount = 0.1 * direction; // Smoother steps
+
+            let newZoom = cam.zoom + zoomAmount;
+
+            // Clamp
+            newZoom = Phaser.Math.Clamp(newZoom, this.minZoom, 3.0);
+
+            cam.setZoom(newZoom);
         });
     }
 
@@ -101,15 +141,16 @@ export default class CameraManager {
         window.addEventListener('zoom-in', window._zoomInHandler);
         window.addEventListener('zoom-out', window._zoomOutHandler);
 
-        // Clean up on scene destroy? The manager instance might persist or is recreated.
-        // It's better to unbind in a cleanup/destroy method.
         this.scene.events.on('destroy', this.destroy, this);
     }
 
     adjustZoom(amount) {
         const cam = this.scene.cameras.main;
         let newZoom = cam.zoom + amount;
-        newZoom = Phaser.Math.Clamp(newZoom, 0.5, 3.0);
+
+        // Use this.minZoom instead of hardcoded 0.5
+        newZoom = Phaser.Math.Clamp(newZoom, this.minZoom, 3.0);
+
         cam.zoomTo(newZoom, 100, 'Linear', true);
     }
 

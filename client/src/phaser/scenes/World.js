@@ -32,7 +32,7 @@ export default class WorldScene extends Phaser.Scene {
     // Keep internal preload for now, or move to AssetLoader if desired.
     // Given the request was to make World.js modular, keeping asset definitions here is fine,
     // or we could delegate to MapManager/PlayerManager preloads.
-    this.load.tilemapTiledJSON("office-map", "/assets/map/test.tmj");
+    this.load.tilemapTiledJSON("office-map", "/assets/map/map2.tmj");
     this.load.image("room-tiles", "/assets/tilesets/Room_Builder_free_32x32.png");
     this.load.image("interior-tiles", "/assets/tilesets/Interiors_free_32x32.png");
     this.load.image("office-tiles", "/assets/tilesets/Modern_Office_Black_Shadow.png");
@@ -67,7 +67,8 @@ export default class WorldScene extends Phaser.Scene {
     // We create local player AFTER map so it's on top? Or respect depths.
     // Actually we wait for socket to join before spawning?
     // The original code spawned player at generic location (1162, 1199) then synced.
-    this.playerManager.createLocalPlayer(1162, 1199, this.username);
+    const { x, y } = this.mapManager.spawnPoint;
+    this.playerManager.createLocalPlayer(x, y, this.username);
 
     // Camera
     this.cameraManager.create(this.mapManager.width, this.mapManager.height);

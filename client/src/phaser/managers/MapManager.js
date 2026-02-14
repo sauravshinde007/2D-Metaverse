@@ -13,6 +13,9 @@ export default class MapManager {
         // Bounds
         this.width = 0;
         this.height = 0;
+
+        // Spawn Point (Default to previous hardcoded value if missing)
+        this.spawnPoint = { x: 1162, y: 1199 };
     }
 
     create() {
@@ -25,25 +28,41 @@ export default class MapManager {
         const roomfloorTileset = this.map.addTilesetImage("Room_Builder_Floors", "room-floor");
         const allTilesets = [interiorTileset, roomTileset, officeTileset, roomfloorTileset];
 
-        // Layers
+        // Layers - Safely attempt to create them (returns null if missing in Tiled)
         this.layers.ground = this.map.createLayer("Ground", allTilesets, 0, 0);
         this.layers.walls = this.map.createLayer("Wall", allTilesets, 0, 0);
         this.layers.props = this.map.createLayer("Props", allTilesets, 0, 0);
         this.layers.props1 = this.map.createLayer("Props1", allTilesets, 0, 0);
         this.layers.props2 = this.map.createLayer("Props2", allTilesets, 0, 0);
+        this.layers.props3 = this.map.createLayer("Props3", allTilesets, 0, 0);
 
-        // Depth
-        this.layers.ground.setDepth(0);
-        this.layers.walls.setDepth(1);
-        this.layers.props.setDepth(2);
-        this.layers.props1.setDepth(3);
-        this.layers.props2.setDepth(4);
+        // Depth & Collisions - Only handle if layer exists
+        if (this.layers.ground) this.layers.ground.setDepth(0);
 
-        // Collisions
-        this.layers.walls.setCollisionByProperty({ collides: true });
-        this.layers.props.setCollisionByProperty({ collides: true });
-        this.layers.props1.setCollisionByProperty({ collides: true });
-        this.layers.props2.setCollisionByProperty({ collides: true });
+        if (this.layers.walls) {
+            this.layers.walls.setDepth(1);
+            this.layers.walls.setCollisionByProperty({ collides: true });
+        }
+
+        if (this.layers.props) {
+            this.layers.props.setDepth(2);
+            this.layers.props.setCollisionByProperty({ collides: true });
+        }
+
+        if (this.layers.props1) {
+            this.layers.props1.setDepth(3);
+            this.layers.props1.setCollisionByProperty({ collides: true });
+        }
+
+        if (this.layers.props2) {
+            this.layers.props2.setDepth(4);
+            this.layers.props2.setCollisionByProperty({ collides: true });
+        }
+
+        if (this.layers.props3) {
+            this.layers.props3.setDepth(5);
+            this.layers.props3.setCollisionByProperty({ collides: true });
+        }
 
         // World bounds
         this.width = this.map.widthInPixels;
@@ -58,15 +77,50 @@ export default class MapManager {
 
         // Initialize RBAC Zones
         this.createRestrictedZones();
+        this.findSpawnPoint();
     }
 
     registerRaycaster(raycasterPlugin) {
         if (raycasterPlugin) {
-            raycasterPlugin.mapGameObjects(
-                [this.layers.walls, this.layers.props, this.layers.props1, this.layers.props2],
-                true
-            );
-            console.log("✅ Raycaster mapped to collision layers");
+            const collisionLayers = [
+                this.layers.walls,
+                this.layers.props,
+                this.layers.props1,
+                this.layers.props2,
+                this.layers.props3
+            ].filter(layer => layer != null); // Only include existing layers
+
+            raycasterPlugin.mapGameObjects(collisionLayers, true);
+            console.log("✅ Raycaster mapped to collision layers", collisionLayers.length);
+        }
+    }
+
+    findSpawnPoint() {
+        console.log("🔍 Searching for Spawn Point...");
+
+        // Debug: Log all object layers found
+        if (this.map.objects) {
+            const layerNames = Object.keys(this.map.objects);
+            console.log("📂 Available Object Layers:", layerNames);
+        }
+
+        const spawnLayer = this.map.getObjectLayer("Spawn");
+
+        if (!spawnLayer) {
+            console.warn("⚠️ 'Spawn' Object Layer NOT found in map. Did you name it exactly 'Spawn'?");
+            return;
+        }
+
+        console.log("✅ 'Spawn' Layer found. Objects inside:", spawnLayer.objects);
+
+        if (spawnLayer.objects) {
+            const spawnObj = spawnLayer.objects.find(obj => obj.name === "SpawnPoint");
+            if (spawnObj) {
+                this.spawnPoint = { x: spawnObj.x, y: spawnObj.y };
+                console.log("📍 Spawn point found at:", this.spawnPoint);
+            } else {
+                console.warn("⚠️ Layer 'Spawn' exists but no object named 'SpawnPoint' found inside it.");
+            }
         }
     }
 
