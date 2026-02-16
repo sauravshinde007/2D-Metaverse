@@ -64,7 +64,7 @@
   z-index: 10;
 }
 
-/* Icon buttons */
+/* Icon buttons type: basic circle */
 .mic-button {
   width: 36px;
   height: 36px;
@@ -87,16 +87,74 @@
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.65);
 }
 
+/* Control Group for Split Button (Mic + Arrow) */
+.control-group {
+    display: flex;
+    align-items: center;
+    background: rgba(18, 18, 30, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.65);
+    padding: 0;
+    transition: all 0.2s ease;
+    position: relative; /* For popup positioning */
+}
+
+/* When active, the whole group glows? Or just the parts? */
+.control-group.active {
+    box-shadow: 0 10px 26px rgba(11, 226, 180, 0.25);
+}
+
+.control-group .mic-button {
+    box-shadow: none; /* Removed individual shadow */
+    border-radius: 20px 0 0 20px;
+    width: 40px; /* Slightly wider */
+}
+
+.control-group .chevron-btn {
+    width: 24px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 20px 20px 0;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    color: #a1a1aa;
+    transition: background 0.2s;
+}
+
+.control-group .chevron-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+/* Active states for split button */
+.control-group .mic-button.active {
+    background-image: linear-gradient(135deg, #9b99fe, #2bc8b7);
+}
+
+.control-group .mic-button.active .mic-icon {
+    filter: invert(0%);
+}
+.control-group .mic-button.muted {
+    background: transparent;
+}
+.control-group .mic-button.muted .mic-icon {
+    filter: invert(100%);
+    opacity: 0.65;
+}
+
+
 /* Hover */
 .mic-button:not(:disabled):hover {
   filter: brightness(1.05);
-  transform: translateY(-1px);
 }
 
 /* Press */
 .mic-button:not(:disabled):active {
   transform: translateY(0);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
 }
 
 /* Icons */
@@ -106,38 +164,11 @@
   object-fit: contain;
 }
 
-/* 🔥 Active states */
-.mic-button.active {
-  background-image: linear-gradient(135deg, #9b99fe, #2bc8b7);
-  box-shadow: 0 10px 26px rgba(11, 226, 180, 0.55);
-}
-
-.mic-button.active .mic-icon {
-  filter: invert(0%);
-}
-
-/* Muted state */
-.mic-button.muted {
-  background: rgba(37, 37, 55, 0.95);
-}
-
-.mic-button.muted .mic-icon {
-  filter: invert(100%);
-  opacity: 0.65;
-}
-
 /* Disabled */
 .mic-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
-}
-
-/* Debug button (🧪) */
-.debug-button {
-  font-size: 18px;
-  color: #e6e7ea;
-  background: rgba(20, 20, 35, 0.95);
 }
 
 /* Permission warning */
@@ -146,18 +177,76 @@
   border: 1px solid rgba(255, 221, 100, 0.65);
   padding: 5px 10px;
   border-radius: 20px;
-
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-
   color: #050509;
-  box-shadow: 0 8px 18px rgba(255, 215, 77, 0.4);
 }
 
-/* Hide unused legacy elements */
-.voice-chat-header,
-.transmission-status,
-.active-calls-badge {
-  display: none;
+/* Settings Menu / Device Picker */
+.device-menu {
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  width: 280px;
+  background: #18181b;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 8px 0;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.device-menu-header {
+  padding: 8px 16px 4px 16px;
+  font-size: 11px;
+  color: #a1a1aa;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.device-item {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: #e4e4e7;
+  font-size: 13px;
+  transition: background 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.device-item.active {
+  color: #2bc8b7;
+  background: rgba(43, 200, 183, 0.05);
+}
+
+.check-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  color: #2bc8b7;
+}
+
+.device-item.active .check-icon {
+  opacity: 1;
+}
+
+.device-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

@@ -33,11 +33,13 @@ const SignupPage = () => {
   }
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-b from-[#14141a] via-[#0d0d14] to-black text-[#e6e7ea] overflow-hidden">
-      {/* Floating blobs (same as HomePage/Login) */}
-      <div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
-        <div className="absolute left-[-8rem] top-[-8rem] w-96 h-96 rounded-[40%_60%_60%_40%] bg-gradient-to-tr from-[#505081] to-[#7272e0] opacity-40 blur-[30px] animate-blob-slow" />
-        <div className="absolute right-[-6rem] bottom-[-6rem] w-72 h-72 rounded-[30%_70%_70%_30%] bg-gradient-to-br from-[#44466f] to-[#8b8be0] opacity-35 blur-[28px] animate-blob-fast" />
+    <div className="min-h-screen relative bg-black text-[#e6e7ea] overflow-hidden">
+      {/* Background Gradients */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+        {/* Cyan/Teal glow - Higher and brighter */}
+        <div className="absolute bottom-[-5%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#00ffff] opacity-[0.35] blur-[160px]" />
+        {/* Blue/Indigo glow - Higher and with more presence */}
+        <div className="absolute bottom-[-5%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-[#0044ff] opacity-[0.4] blur-[160px]" />
       </div>
 
       {/* Shared-style header */}
@@ -196,15 +198,11 @@ function Header() {
         )}
       >
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#9b99fe] to-[#2bc8b7] shadow-md">
-            <span className="text-sm font-bold text-black">M</span>
-          </div>
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-wide">Metaverse</span>
-            <span className="text-[10px] text-zinc-400 hidden sm:block">
-              Remote Collaboration
-            </span>
-          </div>
+          <img
+            src="/logos/logowText-cropped.svg"
+            alt="Metaverse"
+            className="h-7 w-auto object-contain"
+          />
         </Link>
 
         <div className="hidden md:flex items-center gap-3 text-sm">

@@ -68,13 +68,42 @@ export default function ServerStats() {
     // 3. Compute Display List
     const displayList = useMemo(() => {
         const onlineUsernames = new Set(Object.values(onlineUsers).map(u => u.username));
-        // Add current user to online set explicitly (since we are here)
+        // Add current user to online set explicitly
         if (user) onlineUsernames.add(user.username);
 
-        const mapped = allUsers.map(u => ({
-            ...u,
-            isOnline: onlineUsernames.has(u.username)
-        }));
+        // Create a Map of unique users by username to merge API list and Online list
+        const uniqueUsers = new Map();
+
+        // 1. Add all API users
+        allUsers.forEach(u => {
+            uniqueUsers.set(u.username, { ...u, isOnline: onlineUsernames.has(u.username) });
+        });
+
+        // 2. Add any online users that are missing from API list (e.g. joined after fetch)
+        Object.values(onlineUsers).forEach(u => {
+            if (!uniqueUsers.has(u.username)) {
+                uniqueUsers.set(u.username, {
+                    _id: u.id || u._id,
+                    username: u.username,
+                    avatar: u.avatar || null,
+                    role: u.role || 'guest',
+                    isOnline: true
+                });
+            }
+        });
+
+        // 3. Ensure current user is in list
+        if (user && !uniqueUsers.has(user.username)) {
+            uniqueUsers.set(user.username, {
+                _id: user.userId || user._id,
+                username: user.username,
+                avatar: user.avatar,
+                role: user.role,
+                isOnline: true
+            });
+        }
+
+        const mapped = Array.from(uniqueUsers.values());
 
         // Sort: Current User -> Online -> Offline -> Alphabetical
         return mapped.sort((a, b) => {
