@@ -35,6 +35,7 @@ export default class MapManager {
         this.layers.props1 = this.map.createLayer("Props1", allTilesets, 0, 0);
         this.layers.props2 = this.map.createLayer("Props2", allTilesets, 0, 0);
         this.layers.props3 = this.map.createLayer("Props3", allTilesets, 0, 0);
+        this.layers.props4 = this.map.createLayer("Props4", allTilesets, 0, 0);
 
         // Depth & Collisions - Only handle if layer exists
         if (this.layers.ground) this.layers.ground.setDepth(0);
@@ -64,6 +65,11 @@ export default class MapManager {
             this.layers.props3.setCollisionByProperty({ collides: true });
         }
 
+        if (this.layers.props4) {
+            this.layers.props4.setDepth(6);
+            this.layers.props4.setCollisionByProperty({ collides: true });
+        }
+
         // World bounds
         this.width = this.map.widthInPixels;
         this.height = this.map.heightInPixels;
@@ -87,7 +93,8 @@ export default class MapManager {
                 this.layers.props,
                 this.layers.props1,
                 this.layers.props2,
-                this.layers.props3
+                this.layers.props3,
+                this.layers.props4,
             ].filter(layer => layer != null); // Only include existing layers
 
             raycasterPlugin.mapGameObjects(collisionLayers, true);
