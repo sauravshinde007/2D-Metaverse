@@ -23,6 +23,12 @@ export default class PlayerManager {
         this.joystickActive = false;
         this.joystickDirection = { up: false, down: false, left: false, right: false };
 
+        this.currentZoneId = null;
+
+        // Interaction UI
+        this.interactionText = null;
+        this.currentInteractable = null;
+
         // Events
         this.scene.events.on("gameInput", (input) => this.handleGameInput(input));
     }
@@ -131,7 +137,40 @@ export default class PlayerManager {
             case "MOVE_DOWN": this.movement.down = isDown; break;
             case "MOVE_LEFT": this.movement.left = isDown; break;
             case "MOVE_RIGHT": this.movement.right = isDown; break;
-            case "INTERACT": if (isDown) console.log("Player interaction"); break;
+            case "INTERACT":
+                if (isDown) {
+                    console.log("Player interaction");
+                    this.handleInteraction();
+                }
+                break;
+        }
+    }
+
+    handleInteraction() {
+        if (!this.player) return;
+        const interactable = this.currentInteractable; // Use tracked interactable from update loop
+
+        if (interactable) {
+            console.log("Interact with:", interactable);
+
+            // 1. Chairs in Meeting Rooms -> Trigger Meeting
+            if (interactable.type === 'chair') {
+                // Ensure we are logically in a meeting room zone, or just trust the chair's placement
+                if (this.currentZoneId && this.currentZoneId.startsWith('meeting_room')) {
+                    window.dispatchEvent(new CustomEvent('enter-meeting-zone', {
+                        detail: {
+                            zoneId: this.currentZoneId,
+                            zoneName: "Meeting Room"
+                        }
+                    }));
+                }
+            }
+
+            // 2. Computers -> Trigger Computer UI (Placeholder)
+            else if (interactable.type === 'computer') {
+                console.log("🖥️ Computer interaction triggered");
+                // window.dispatchEvent(new CustomEvent('open-computer', { ... }));
+            }
         }
     }
 
@@ -147,6 +186,8 @@ export default class PlayerManager {
 
         // RBAC Check
         const access = this.mapManager.checkZoneAccess(this.player, myRole);
+        this.mapManager.updateImmersion(access.zone);
+
         if (!access.allowed && access.zone) {
             const zone = access.zone;
             const centerX = zone.x + zone.width / 2;
@@ -155,6 +196,19 @@ export default class PlayerManager {
             this.player.x += Math.cos(angle) * 5;
             this.player.y += Math.sin(angle) * 5;
             this.showAccessDenied(zone.name);
+        } else {
+            // Access allowed. Check if zone changed.
+            const newZoneId = access.zone ? access.zone.id : null;
+
+            if (newZoneId !== this.currentZoneId) {
+                // Leaving previous zone
+                if (this.currentZoneId && this.currentZoneId.startsWith('meeting_room')) {
+                    window.dispatchEvent(new CustomEvent('leave-meeting-zone', { detail: { zoneId: this.currentZoneId } }));
+                }
+
+                // Entering new zone logic removed - wait for Interaction
+                this.currentZoneId = newZoneId;
+            }
         }
 
         // Movement
@@ -213,6 +267,39 @@ export default class PlayerManager {
                 others: otherPlayers
             }
         }));
+
+        this.updateInteractionUI();
+    }
+
+    updateInteractionUI() {
+        if (!this.player) return;
+
+        // Check constantly for nearby interaction
+        const interactable = this.mapManager.getNearestInteractable(this.player.x, this.player.y);
+
+        // Show/Hide prompt
+        if (interactable) {
+            if (!this.interactionText) {
+                this.interactionText = this.scene.add.text(0, 0, "Press E to Interact", {
+                    fontFamily: 'Inter',
+                    fontSize: '12px',
+                    backgroundColor: '#000000aa',
+                    padding: { x: 6, y: 4 },
+                    fill: '#ffffff'
+                }).setOrigin(0.5).setDepth(200).setResolution(2);
+            }
+
+            // Position above player (or object?)
+            // Let's position it above the object to attract attention
+            this.interactionText.setPosition(interactable.x + interactable.width / 2, interactable.y - 20);
+            this.interactionText.setVisible(true);
+            this.currentInteractable = interactable;
+        } else {
+            if (this.interactionText) {
+                this.interactionText.setVisible(false);
+            }
+            this.currentInteractable = null;
+        }
     }
 
     stopAnimation() {

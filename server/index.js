@@ -22,6 +22,7 @@ import userRoutes from "./routes/userRoutes.js";
 import configurePassport from './config/passport.js';
 import User from './models/User.js'; // Import statically
 import { syncUsersBatch } from "./services/streamService.js";
+import meetingRoutes from "./routes/meetingRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -74,6 +75,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use("/api/auth", authRoutes);        // Authentication routes (signup/login)
 app.use("/api/stream", streamRoutes);    // Stream Chat related routes
 app.use("/api/users", userRoutes);       // Users routes
+app.use("/api/meeting", meetingRoutes);  // Meeting routes
 
 // --- Socket.IO Connection Handling ---
 socketHandler(io);

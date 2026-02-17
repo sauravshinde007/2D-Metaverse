@@ -15,6 +15,7 @@ import ServerStats from "../components/ServerStats"; // Import
 import ZoomControls from "../components/ZoomControls"; // Import
 
 import Minimap from "../components/Minimap"; // Import
+import MeetingModal from "../components/MeetingModal"; // Import meeting modal
 
 function Metaverse() {
     const { user } = useAuth();
@@ -57,6 +58,9 @@ function Metaverse() {
 
                 {/* React Minimap Overlay */}
                 <Minimap />
+
+                {/* Meeting Room Modal */}
+                <MeetingModal />
 
                 {/* 4. Pass the state and setter down to the controls */}
                 <VoiceChat
