@@ -15,6 +15,7 @@ import ServerStats from "../components/ServerStats"; // Import
 import ZoomControls from "../components/ZoomControls"; // Import
 
 import Minimap from "../components/Minimap"; // Import
+import PlayerLabels from "../components/PlayerLabels"; // Import
 import MeetingModal from "../components/MeetingModal"; // Import meeting modal
 
 function Metaverse() {
@@ -58,6 +59,9 @@ function Metaverse() {
 
                 {/* React Minimap Overlay */}
                 <Minimap />
+
+                {/* React Player Labels Overlay */}
+                <PlayerLabels />
 
                 {/* Meeting Room Modal */}
                 <MeetingModal />

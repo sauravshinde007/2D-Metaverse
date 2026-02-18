@@ -223,59 +223,51 @@ export default class NetworkManager {
         }
 
         // Raycaster logic
-        const numRays = 36;
-        const angleStep = (Math.PI * 2) / numRays;
-        const detected = new Set();
+        // Efficient Raycaster Logic:
+        // 1. Filter by distance first (cheap)
+        // 2. Raycast only to those candidates (expensive but fewer)
 
-        for (let i = 0; i < numRays; i++) {
+        // 1. Distance Filter
+        const candidates = [];
+        Object.keys(players).forEach(id => {
+            const other = players[id];
+            const dist = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, other.x, other.y);
+            if (dist <= radius) {
+                candidates.push({ id, other, dist });
+            }
+        });
+
+        if (candidates.length === 0) return [];
+
+        // 2. Line of Sight Check
+        candidates.forEach(cand => {
+            const { id, other, dist } = cand;
+            let blocked = false;
+
+            // Create a ray from me to them
             const ray = raycaster.createRay({ origin: { x: myPlayer.x, y: myPlayer.y } });
-            ray.setAngle(i * angleStep);
-            ray.setRayRange(radius);
-            const intersections = ray.cast();
+            ray.setAngle(Phaser.Math.Angle.Between(myPlayer.x, myPlayer.y, other.x, other.y));
+            ray.setRayRange(dist); // Only check up to the target
 
-            if (!intersections || intersections.length === 0) continue;
+            const intersection = ray.cast();
 
-            // Check intersections against walls
-            for (const pt of intersections) {
-                const d = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, pt.x, pt.y);
-                if (d > radius) continue;
+            // If intersection exists, it means we hit a wall/obstacle
+            if (intersection) {
+                blocked = true;
+            }
 
-                Object.keys(players).forEach(id => {
-                    if (detected.has(id)) return;
-                    const other = players[id];
-                    const dToPlayer = Phaser.Math.Distance.Between(pt.x, pt.y, other.x, other.y);
-
-                    // if ray hit near player
-                    if (dToPlayer < 40) {
-                        // Verify LOS
-                        let blocked = false;
-                        const directRay = raycaster.createRay({ origin: { x: myPlayer.x, y: myPlayer.y } });
-                        directRay.setAngle(Phaser.Math.Angle.Between(myPlayer.x, myPlayer.y, other.x, other.y));
-                        const directHits = directRay.cast();
-
-                        if (directHits && directHits.length > 0) {
-                            const playerDist = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, other.x, other.y);
-                            for (const wall of directHits) {
-                                const wallDist = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, wall.x, wall.y);
-                                if (wallDist < playerDist - 20) {
-                                    blocked = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!blocked) {
-                            detected.add(id);
-                            const username = this.playerManager.playerUsernames.get(id);
-                            nearbyPlayers.push({
-                                id, username, x: other.x, y: other.y,
-                                distance: Math.round(Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, other.x, other.y))
-                            });
-                        }
-                    }
+            if (!blocked) {
+                const username = this.playerManager.playerUsernames.get(id);
+                nearbyPlayers.push({
+                    id,
+                    username,
+                    x: other.x,
+                    y: other.y,
+                    distance: Math.round(dist)
                 });
             }
-        }
+        });
+
         return nearbyPlayers;
     }
 

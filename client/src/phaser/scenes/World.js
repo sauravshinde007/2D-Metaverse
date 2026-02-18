@@ -103,18 +103,24 @@ export default class WorldScene extends Phaser.Scene {
     // Network update (throttled inside)
     if (this.networkManager) this.networkManager.update(time);
 
-    // Update audio volumes for spatial sound
+    // Update audio volumes for spatial sound (Throttled)
+    const now = Date.now();
     if (this.voiceManager && this.playerManager) {
-      // iterate all players and update volume based on sanitized ID match
-      const players = this.playerManager.players;
-      Object.keys(players).forEach(socketId => {
-        const peerId = peerService.getPeerId(socketId);
-        if (this.voiceManager.audioElements[peerId]) {
-          const otherContainer = players[socketId];
-          const otherPlayer = { x: otherContainer.x, y: otherContainer.y };
-          this.voiceManager.updateAudioVolume(this.playerManager.player, otherPlayer, peerId);
-        }
-      });
+      if (!this.lastAudioUpdate || now - this.lastAudioUpdate > 200) {
+        // iterate all players and update volume based on sanitized ID match
+        const players = this.playerManager.players;
+        Object.keys(players).forEach(socketId => {
+          const peerId = peerService.getPeerId(socketId);
+          if (this.voiceManager.audioElements[peerId]) {
+            const otherContainer = players[socketId];
+            if (otherContainer) {
+              const otherPlayer = { x: otherContainer.x, y: otherContainer.y };
+              this.voiceManager.updateAudioVolume(this.playerManager.player, otherPlayer, peerId);
+            }
+          }
+        });
+        this.lastAudioUpdate = now;
+      }
 
       // Update local video bubble pos
       this.voiceManager.updateLocalVideoPosition(this.playerManager.player, this.cameras.main);

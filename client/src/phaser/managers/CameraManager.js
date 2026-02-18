@@ -15,6 +15,7 @@ export default class CameraManager {
         this.mapHeight = mapHeight;
 
         const cam = this.scene.cameras.main;
+        cam.roundPixels = true;
         cam.setBounds(0, 0, mapWidth, mapHeight);
 
         // Initial Zoom Logic
@@ -65,7 +66,7 @@ export default class CameraManager {
 
     startFollow(target) {
         this.followTarget = target;
-        this.scene.cameras.main.startFollow(target);
+        this.scene.cameras.main.startFollow(target, true);
     }
 
     stopFollow() {

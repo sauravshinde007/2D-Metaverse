@@ -54,32 +54,6 @@ export default class PlayerManager {
         anims.create({ key: "walk-left", frames: anims.generateFrameNumbers("ash", { start: 36, end: 41 }), frameRate: 10, repeat: -1 });
         anims.create({ key: "walk-down", frames: anims.generateFrameNumbers("ash", { start: 42, end: 47 }), frameRate: 15, repeat: -1 });
 
-        // Sit - Assuming the user meant standard frame indices or appended ones. 
-        // User said "last 4 images". Tt depends on sheet size.
-        // Usually Ash sprite sheet is 48 frames (6 cols x 8 rows) or similar.
-        // Standard:
-        // 0-23: Idle (all dirs)
-        // 24-47: Walk (all dirs)
-        // If there are more, they might be 48, 49, 50, 51 -> Sit Down, Left, Right, Up?
-        // Let's assume standard expanded sheet or check user input carefully.
-        // "last 4 images are for the siting position of the character in bottom, left, right and up"
-        // Let's assume indices relative to the end or specific numbers if the sheet is standard 16x32 or something.
-        // Standard RPG Maker sheets are usually complex.
-        // Let's try to infer from 'last 4'. If the sheet has N frames, it's N-4, N-3, N-2, N-1.
-
-        // Wait, standard Ash spritesheet usually ends at 48.
-        // If user says "last 4", and provided no new asset, maybe they mean frames 52, 53, 54, 55? 
-        // Or maybe they just EDITED the sheet.
-        // I'll assume frames 48, 49, 50, 51 if it's a 52 frame sheet, or similar.
-        // Actually, let's look at existing frames. Max used is 47.
-        // So let's guess 48, 49, 50, 51.
-
-        // Mapping based on "bottom, left, right and up":
-        // 48: bottom (sit-down)
-        // 49: left (sit-left)
-        // 50: right (sit-right)
-        // 51: up (sit-up)
-
         anims.create({ key: "sit-down", frames: [{ key: "ash", frame: 48 }], frameRate: 1 });
         anims.create({ key: "sit-left", frames: [{ key: "ash", frame: 49 }], frameRate: 1 });
         anims.create({ key: "sit-right", frames: [{ key: "ash", frame: 50 }], frameRate: 1 });
@@ -87,15 +61,8 @@ export default class PlayerManager {
     }
 
     createLocalPlayer(x, y, username) {
+
         this.player = this.scene.physics.add.sprite(x, y, "ash");
-        this.playerUsernameText = this.scene.add
-            .text(x, y - 30, "You", {
-                fontFamily: 'Inter',
-                fontSize: "14px", fill: "#90EE90", fontStyle: "bold",
-                stroke: "#000000", strokeThickness: 3,
-            })
-            .setOrigin(0.5)
-            .setResolution(2);
 
         // Glow
         const localGlow = this.player.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
@@ -105,7 +72,6 @@ export default class PlayerManager {
         this.player.on('pointerout', () => localGlow.setActive(false));
 
         this.player.setDepth(5);
-        this.playerUsernameText.setDepth(6);
         this.player.setCollideWorldBounds(true);
 
         // Colliders
@@ -119,15 +85,7 @@ export default class PlayerManager {
         if (this.players[id]) this.players[id].destroy();
 
         const sprite = this.scene.add.sprite(0, 0, "ash");
-        const nameText = this.scene.add.text(0, -30, data.username, {
-            fontFamily: 'Inter',
-            fontSize: "14px", fill: "#ffffff", fontStyle: "bold",
-            stroke: "#000000", strokeThickness: 3,
-        })
-            .setOrigin(0.5)
-            .setResolution(2);
-
-        const container = this.scene.add.container(data.x, data.y, [sprite, nameText]);
+        const container = this.scene.add.container(data.x, data.y, [sprite]);
 
         // Glow
         const remoteGlow = sprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
@@ -316,24 +274,90 @@ export default class PlayerManager {
 
         this.player.anims.play(this.currentAnimation, true);
 
-        // Update Username Text
-        this.playerUsernameText.setPosition(this.player.x, this.player.y - 30);
+        // Update React Labels (New)
+        this.updatePlayerLabels();
 
-        // 📡 Dispatch Minimap Data
-        const otherPlayers = Object.keys(this.players).map(id => ({
-            id,
-            x: this.players[id].x,
-            y: this.players[id].y
-        }));
+        // Limit Minimap Updates (10fps is enough)
+        const now = Date.now();
+        if (!this.lastMinimapUpdate || now - this.lastMinimapUpdate > 100) {
+            // 📡 Dispatch Minimap Data
+            const otherPlayers = Object.keys(this.players).map(id => ({
+                id,
+                x: this.players[id].x,
+                y: this.players[id].y
+            }));
 
-        window.dispatchEvent(new CustomEvent('minimap-update', {
-            detail: {
-                me: { x: this.player.x, y: this.player.y },
-                others: otherPlayers
+            window.dispatchEvent(new CustomEvent('minimap-update', {
+                detail: {
+                    me: { x: this.player.x, y: this.player.y },
+                    others: otherPlayers
+                }
+            }));
+            this.lastMinimapUpdate = now;
+        }
+
+        // Limit Interaction UI Updates (10fps is enough)
+        if (!this.lastInteractionUpdate || now - this.lastInteractionUpdate > 100) {
+            this.updateInteractionUI();
+            this.lastInteractionUpdate = now;
+        }
+    }
+
+    updatePlayerLabels() {
+        if (!this.player) return;
+
+        const camera = this.scene.cameras.main;
+        const labels = [];
+
+        // Helper to project world to screen
+        // We calculate relative to canvas DOM element
+        const getScreenPos = (wx, wy) => {
+            // worldView check
+            if (!camera.worldView.contains(wx, wy)) return null;
+
+            // Convert to screen
+            // (WorldX - CameraScrollX) * Zoom = ScreenX
+            // Note: If roundPixels is on, we might want to floor this manually?
+            // Actually, for CSS transform, float is fine, browser handles subpixel reflow.
+            const sx = (wx - camera.worldView.x) * camera.zoom;
+            const sy = (wy - camera.worldView.y) * camera.zoom;
+            return { x: sx, y: sy };
+        };
+
+        // 1. Local Player
+        const localPos = getScreenPos(this.player.x, this.player.y);
+        if (localPos) {
+            labels.push({
+                id: 'me',
+                username: 'You',
+                x: localPos.x + (5 * camera.zoom),
+                y: localPos.y - (25 * camera.zoom), // Offset scaled by zoom
+                isLocal: true
+            });
+        }
+
+        // 2. Remote Players
+        // this.players[id] is a Container {x, y, list...}
+        Object.keys(this.players).forEach(id => {
+            const container = this.players[id];
+            const pos = getScreenPos(container.x, container.y);
+            if (pos) {
+                const username = this.playerUsernames.get(id) || "Player";
+                labels.push({
+                    id: id,
+                    username: username,
+                    x: pos.x + (5 * camera.zoom),
+                    y: pos.y - (25 * camera.zoom),
+                    isLocal: false
+                });
             }
-        }));
+        });
 
-        this.updateInteractionUI();
+        // Dispatch efficient event
+        // We use a custom event on window
+        window.dispatchEvent(new CustomEvent('player-labels-update', {
+            detail: labels
+        }));
     }
 
     updateInteractionUI() {

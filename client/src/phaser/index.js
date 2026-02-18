@@ -37,6 +37,7 @@ export default function startGame(username) {
     },
     render: {
       pixelArt: true, // Enable pixel art rendering
+      roundPixels: true,
     },
     canvasStyle: "image-rendering: pixelated;",
     scene: [],
