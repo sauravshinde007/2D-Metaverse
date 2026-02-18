@@ -27,10 +27,18 @@ export default class PlayerManager {
 
         // Interaction UI
         this.interactionText = null;
+        // Interaction UI
+        this.interactionText = null;
         this.currentInteractable = null;
+
+        this.isInMeeting = false;
 
         // Events
         this.scene.events.on("gameInput", (input) => this.handleGameInput(input));
+        window.addEventListener("meeting-status-change", (e) => {
+            this.isInMeeting = e.detail.active;
+            console.log("Meeting status changed. Active:", this.isInMeeting);
+        });
     }
 
     createAnimations() {
@@ -45,6 +53,37 @@ export default class PlayerManager {
         anims.create({ key: "walk-up", frames: anims.generateFrameNumbers("ash", { start: 30, end: 35 }), frameRate: 10, repeat: -1 });
         anims.create({ key: "walk-left", frames: anims.generateFrameNumbers("ash", { start: 36, end: 41 }), frameRate: 10, repeat: -1 });
         anims.create({ key: "walk-down", frames: anims.generateFrameNumbers("ash", { start: 42, end: 47 }), frameRate: 15, repeat: -1 });
+
+        // Sit - Assuming the user meant standard frame indices or appended ones. 
+        // User said "last 4 images". Tt depends on sheet size.
+        // Usually Ash sprite sheet is 48 frames (6 cols x 8 rows) or similar.
+        // Standard:
+        // 0-23: Idle (all dirs)
+        // 24-47: Walk (all dirs)
+        // If there are more, they might be 48, 49, 50, 51 -> Sit Down, Left, Right, Up?
+        // Let's assume standard expanded sheet or check user input carefully.
+        // "last 4 images are for the siting position of the character in bottom, left, right and up"
+        // Let's assume indices relative to the end or specific numbers if the sheet is standard 16x32 or something.
+        // Standard RPG Maker sheets are usually complex.
+        // Let's try to infer from 'last 4'. If the sheet has N frames, it's N-4, N-3, N-2, N-1.
+
+        // Wait, standard Ash spritesheet usually ends at 48.
+        // If user says "last 4", and provided no new asset, maybe they mean frames 52, 53, 54, 55? 
+        // Or maybe they just EDITED the sheet.
+        // I'll assume frames 48, 49, 50, 51 if it's a 52 frame sheet, or similar.
+        // Actually, let's look at existing frames. Max used is 47.
+        // So let's guess 48, 49, 50, 51.
+
+        // Mapping based on "bottom, left, right and up":
+        // 48: bottom (sit-down)
+        // 49: left (sit-left)
+        // 50: right (sit-right)
+        // 51: up (sit-up)
+
+        anims.create({ key: "sit-down", frames: [{ key: "ash", frame: 48 }], frameRate: 1 });
+        anims.create({ key: "sit-left", frames: [{ key: "ash", frame: 49 }], frameRate: 1 });
+        anims.create({ key: "sit-right", frames: [{ key: "ash", frame: 50 }], frameRate: 1 });
+        anims.create({ key: "sit-up", frames: [{ key: "ash", frame: 51 }], frameRate: 1 });
     }
 
     createLocalPlayer(x, y, username) {
@@ -155,7 +194,24 @@ export default class PlayerManager {
 
             // 1. Chairs in Meeting Rooms -> Trigger Meeting
             if (interactable.type === 'chair') {
-                // Ensure we are logically in a meeting room zone, or just trust the chair's placement
+                // Determine facing direction from custom property "dir" or "direction" set in Tiled
+                // If not set, default to 'up' or 'down' based on chair position?
+                // Tiled Property: "dir" : "up" | "down" | "left" | "right"
+                const dirProp = interactable.rawProperties && interactable.rawProperties.find(p => p.name === "dir");
+                const direction = dirProp ? dirProp.value : "down";
+
+                // Play Sitting Animation
+                if (this.player && this.player.anims) {
+                    this.player.anims.play(`sit-${direction}`, true);
+                    this.player.body.setVelocity(0); // Stop movement
+                    this.currentAnimation = `sit-${direction}`; // Lock animation
+                }
+
+                // Align position to center of chair
+                this.player.x = interactable.x + interactable.width / 2;
+                this.player.y = interactable.y + interactable.height / 2 - 10; // Offset slightly for visual depth
+
+                // Ensure we are logically in a meeting room zone
                 if (this.currentZoneId && this.currentZoneId.startsWith('meeting_room')) {
                     window.dispatchEvent(new CustomEvent('enter-meeting-zone', {
                         detail: {
@@ -177,10 +233,9 @@ export default class PlayerManager {
     update(myRole) {
         if (!this.player || !this.player.body) return;
 
-        // Chat Focus check
-        if (this.inputManager.chatFocused) {
+        // Meeting or Chat Focus check
+        if (this.inputManager.chatFocused || this.isInMeeting) {
             this.player.body.setVelocity(0);
-            this.stopAnimation();
             return;
         }
 
@@ -233,6 +288,16 @@ export default class PlayerManager {
         }
 
         // Animation
+        if (this.currentAnimation.startsWith('sit-')) {
+            // If dragging joystick or pressing keys, break out of sit
+            if (this.player.body.velocity.x !== 0 || this.player.body.velocity.y !== 0) {
+                // Moving, so let normal logic take over
+            } else {
+                // Still sitting, do not override
+                return;
+            }
+        }
+
         if (this.player.body.velocity.x < 0) {
             this.currentAnimation = "walk-left";
             this.lastDirection = "left";

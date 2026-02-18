@@ -45,6 +45,7 @@ const MeetingModal = () => {
 
             if (response.data && response.data.url) {
                 setMeetingUrl(response.data.url);
+                window.dispatchEvent(new CustomEvent('meeting-status-change', { detail: { active: true } }));
             } else {
                 setError("Failed to get meeting URL");
             }
@@ -60,19 +61,20 @@ const MeetingModal = () => {
     };
 
     const closeMeeting = () => {
-        setMeetingUrl(null);
-        // We don't clear zone because they are still IN the zone. 
-        // Just hiding the active call UI.
-        // But wait, if they close it, they might want to rejoin.
-        // So we strip the URL but keep the "Start" state visible?
-        // Or we assume "Close" means "Minimize" or "Leave Call".
-        // The iframe is the call. Destroying it leaves the call.
+        if (meetingUrl) {
+            if (window.confirm("Disconnect from meeting?")) {
+                setMeetingUrl(null);
+                window.dispatchEvent(new CustomEvent('meeting-status-change', { detail: { active: false } }));
+            }
+        } else {
+            setZone(null);
+        }
     };
 
     if (!zone) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
             {/* Modal Container - pointer-events-auto to capture clicks */}
             <div className={`bg-black/90 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-white/10 
                             ${meetingUrl ? 'w-[90%] h-[90%]' : 'w-full max-w-md'} 

@@ -557,6 +557,11 @@
                  "name":"",
                  "properties":[
                         {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"left"
+                        }, 
+                        {
                          "name":"type",
                          "type":"string",
                          "value":"chair"
@@ -584,6 +589,160 @@
                  "width":76,
                  "x":695.5,
                  "y":912.166666666667
+                }, 
+                {
+                 "height":34.6666666666667,
+                 "id":16,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"down"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":24.6666666666667,
+                 "x":148.166666666667,
+                 "y":459.833333333333
+                }, 
+                {
+                 "height":42.6666666666667,
+                 "id":17,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"right"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":20.6666666666667,
+                 "x":86.1666666666667,
+                 "y":487.833333333333
+                }, 
+                {
+                 "height":40,
+                 "id":19,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"up"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":23.3333333333333,
+                 "x":148.833333333333,
+                 "y":527.166666666667
+                }, 
+                {
+                 "height":30.6666666666666,
+                 "id":20,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"down"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":23.3333333333333,
+                 "x":150.166666666667,
+                 "y":782.5
+                }, 
+                {
+                 "height":41.3333333333334,
+                 "id":21,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"left"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":19.3333333333333,
+                 "x":217.5,
+                 "y":809.833333333333
+                }, 
+                {
+                 "height":38.6666666666666,
+                 "id":22,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"up"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":25.3333333333333,
+                 "x":148.833333333333,
+                 "y":848.5
+                }, 
+                {
+                 "height":43.3333333333334,
+                 "id":23,
+                 "name":"",
+                 "properties":[
+                        {
+                         "name":"dir",
+                         "type":"string",
+                         "value":"right"
+                        }, 
+                        {
+                         "name":"type",
+                         "type":"string",
+                         "value":"chair"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":23.3333333333333,
+                 "x":83.5,
+                 "y":807.833333333333
                 }],
          "offsetx":14.5,
          "offsety":3.5,
@@ -594,7 +753,7 @@
          "y":0
         }],
  "nextlayerid":15,
- "nextobjectid":16,
+ "nextobjectid":24,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
