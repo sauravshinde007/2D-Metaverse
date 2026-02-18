@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mic STT Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+
+<h2>Microphone STT Test</h2>
+
+<button onclick="start()">Start</button>
+
+<script>
+
+const socket = io("http://localhost:5000");
+
+let ctx, processor, source;
+
+
+async function start() {
+
+  ctx = new AudioContext();
+
+  await ctx.resume();
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: true
+  });
+
+  source = ctx.createMediaStreamSource(stream);
+
+  processor = ctx.createScriptProcessor(4096, 1, 1);
+
+  source.connect(processor);
+  processor.connect(ctx.destination);
+
+  processor.onaudioprocess = (e) => {
+
+    const input = e.inputBuffer.getChannelData(0);
+
+    const down = downsample(input, ctx.sampleRate, 16000);
+
+    socket.emit("audio", {
+      chunk: Array.from(down),
+    });
+
+    console.log("Mic sent:", down.length);
+  };
+}
+
+
+function downsample(buffer, inRate, outRate) {
+
+  if (inRate === outRate) return buffer;
+
+  const ratio = inRate / outRate;
+
+  const len = Math.round(buffer.length / ratio);
+
+  const result = new Float32Array(len);
+
+  for (let i = 0; i < len; i++) {
+
+    let sum = 0;
+    let count = 0;
+
+    for (
+      let j = Math.round(i * ratio);
+      j < Math.round((i + 1) * ratio);
+      j++
+    ) {
+      sum += buffer[j];
+      count++;
+    }
+
+    result[i] = sum / count;
+  }
+
+  return result;
+}
+
+</script>
+
+</body>
+</html>
