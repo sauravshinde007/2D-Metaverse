@@ -1,13 +1,26 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
-import { X, Camera, User, Mail, Save, Loader2, UploadCloud } from "lucide-react";
+import { X, User, CreditCard, Users, Building, FileText, Bell, Settings, Mail, Lock, Search, Plus, Eye, EyeOff, Video, Clock, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function UserSettingsModal({ isOpen, onClose }) {
     const { user, token, setUser } = useAuth();
+    const [activeTab, setActiveTab] = useState("account");
+
+    // Meetings State
+    const [meetingsHistory, setMeetingsHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
+    // Account State
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
-    const [username, setUsername] = useState("");
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+
     const [currentAvatarUrl, setCurrentAvatarUrl] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState("");
@@ -19,31 +32,60 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
     const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL;
 
-    // Reset and Pre-fill fields when modal opens
     useEffect(() => {
         if (isOpen && user) {
+            // Split username into first and last name if possible
+            const names = (user.username || "").split(" ");
+            setFirstName(names[0] || "");
+            setLastName(names.slice(1).join(" ") || "");
+
             setEmail(user.email || "");
-            setUsername(user.username || "");
             setCurrentAvatarUrl(user.avatar || "");
             setPreviewUrl("");
             setSelectedFile(null);
             setMessage("");
             setError("");
+            setCurrentPassword("");
+            setNewPassword("");
         }
     }, [user, isOpen]);
+
+    useEffect(() => {
+        if (activeTab === 'meetings' && isOpen) {
+            const fetchHistory = async () => {
+                setLoadingHistory(true);
+                try {
+                    const res = await axios.get(`${serverUrl}/api/meeting/history`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setMeetingsHistory(res.data.history || []);
+                } catch (e) {
+                    console.error("Failed to load meetings history:", e);
+                } finally {
+                    setLoadingHistory(false);
+                }
+            };
+            fetchHistory();
+        }
+    }, [activeTab, serverUrl, token, isOpen]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Basic validation
-            if (file.size > 5 * 1024 * 1024) {
-                setError("File size should be less than 5MB");
+            if (file.size > 15 * 1024 * 1024) {
+                setError("File size should be less than 15MB");
                 return;
             }
             setSelectedFile(file);
             setPreviewUrl(URL.createObjectURL(file));
             setError("");
         }
+    };
+
+    const handleDeleteAvatar = () => {
+        setPreviewUrl("");
+        setSelectedFile(null);
+        setCurrentAvatarUrl("");
     };
 
     const handleSubmit = async (e) => {
@@ -54,10 +96,16 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
         try {
             const formData = new FormData();
-            formData.append("username", username);
+            const fullName = `${firstName} ${lastName}`.trim() || firstName;
+            formData.append("username", fullName);
             formData.append("email", email);
             if (selectedFile) {
                 formData.append("avatar", selectedFile);
+            }
+
+            if (currentPassword && newPassword) {
+                formData.append("currentPassword", currentPassword);
+                formData.append("newPassword", newPassword);
             }
 
             const response = await axios.put(
@@ -71,21 +119,18 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                 }
             );
 
-            // Update local user state
             const updatedUser = { ...user, ...response.data.user };
             setUser(updatedUser);
             localStorage.setItem("user", JSON.stringify(updatedUser)); // Persist update
 
             setMessage("Profile updated successfully!");
 
-            // If we're not closing immediately, update the current avatar view to the new one
             if (response.data.user.avatar) {
                 setCurrentAvatarUrl(response.data.user.avatar);
                 setPreviewUrl("");
                 setSelectedFile(null);
             }
 
-            // Optional: Close after delay or let user close
             setTimeout(() => {
                 onClose();
             }, 1500);
@@ -100,9 +145,33 @@ export default function UserSettingsModal({ isOpen, onClose }) {
 
     if (!isOpen) return null;
 
-    // Helper to get initials
-    const getInitials = (name) => {
-        return name ? name.charAt(0).toUpperCase() : "U";
+    const NAVIGATION = {
+        GENERAL: [
+            { id: 'account', label: 'Account', icon: User },
+            { id: 'meetings', label: 'Meetings', icon: Video }
+        ],
+        SYSTEM: [
+            { id: 'notifications', label: 'Notifications', icon: Bell },
+            { id: 'preferences', label: 'Preferences', icon: Settings }
+        ]
+    };
+
+    const renderNavigationItem = (item) => {
+        const Icon = item.icon;
+        const isActive = activeTab === item.id;
+        return (
+            <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
+                    ? 'bg-[#e7f5f0] text-[#136c50] shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+            >
+                <Icon size={18} className={isActive ? "text-[#136c50]" : "text-gray-400"} />
+                {item.label}
+            </button>
+        );
     };
 
     return (
@@ -112,159 +181,319 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6"
+                    className="fixed inset-0 z-[2000] flex bg-white"
                 >
                     <motion.div
-                        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="w-full max-w-5xl h-[85vh] bg-[#0f0f11] rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col md:flex-row relative"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="w-full h-full bg-white flex flex-col overflow-hidden"
                     >
-                        {/* Close Button */}
-                        <button
-                            onClick={onClose}
-                            className="absolute top-6 right-6 z-20 p-2 rounded-full bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-
-                        {/* Left Sidebar / Visual Area */}
-                        <div className="md:w-1/3 bg-gradient-to-br from-indigo-900/20 via-zinc-900 to-zinc-900 border-b md:border-b-0 md:border-r border-zinc-800 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                            {/* Background Elements */}
-                            <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
-                                <div className="absolute top-10 left-10 w-32 h-32 bg-indigo-500 rounded-full blur-[80px]"></div>
-                                <div className="absolute bottom-10 right-10 w-40 h-40 bg-purple-500 rounded-full blur-[80px]"></div>
+                        {/* Top Navbar */}
+                        <div className="flex items-center bg-[#f8f9fa] justify-between px-6 py-4 border-b border-gray-200">
+                            <div className="flex items-center gap-4">
+                                <button onClick={onClose} className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-colors shadow-sm">
+                                    <X size={18} />
+                                </button>
+                                <h1 className="text-lg font-medium text-gray-800">Settings</h1>
                             </div>
 
-                            <div className="relative z-10">
-                                <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Public Profile</h2>
-                                <p className="text-zinc-500 mb-8 text-sm">Manage how you appear to others in the Metaverse.</p>
-
-                                {/* Avatar Upload Section */}
-                                <div className="relative group cursor-pointer w-fit mx-auto" onClick={() => fileInputRef.current?.click()}>
-                                    <div className="w-40 h-40 rounded-full border-4 border-zinc-800 shadow-xl overflow-hidden bg-zinc-800 flex items-center justify-center relative transition-transform transform group-hover:scale-105">
-                                        {/* Avatar Logic */}
-                                        {previewUrl ? (
-                                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                        ) : currentAvatarUrl ? (
-                                            <img src={currentAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-linear-to-br from-[#9b99fe] to-indigo-600 flex items-center justify-center text-5xl font-bold text-white">
-                                                {getInitials(username)}
-                                            </div>
-                                        )}
-
-                                        {/* Hover Overlay */}
-                                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                            <Camera className="text-white mb-1" size={24} />
-                                            <span className="text-xs font-medium text-white">Change Photo</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    accept="image/*"
-                                    className="hidden"
-                                />
-
-                                <div className="mt-6">
-                                    <h3 className="text-xl font-semibold text-white">{username || "User"}</h3>
-                                    <p className="text-zinc-500 text-sm mt-1">{email || "No email set"}</p>
-                                    <span className="inline-block mt-3 px-3 py-1 bg-zinc-800 rounded-full text-xs font-mono text-zinc-400 border border-zinc-700">
-                                        {user?.role?.toUpperCase() || "EMPLOYEE"}
-                                    </span>
-                                </div>
-                            </div>
+                            {/* Expand icon placeholder */}
                         </div>
 
-                        {/* Right Content / Form Area */}
-                        <div className="flex-1 p-8 md:p-12 overflow-y-auto custom-scrollbar">
-                            <div className="max-w-xl mx-auto py-8">
-                                <h3 className="text-2xl font-bold text-white mb-6 border-b border-zinc-800 pb-4">Account Details</h3>
+                        {/* Main Content Area */}
+                        <div className="flex flex-1 overflow-hidden">
 
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-                                            <User size={16} /> Username
-                                        </label>
-                                        <div className="relative group">
-                                            <input
-                                                type="text"
-                                                required
-                                                value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
-                                                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#9b99fe]/50 focus:border-[#9b99fe] transition-all"
-                                                placeholder="Enter your username"
-                                            />
+                            {/* Left Sidebar */}
+                            <div className="w-64 border-r border-gray-200 bg-[#f8f9fa] flex flex-col px-3 py-6 overflow-y-auto">
+                                <div className="mb-6">
+                                    <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-4">General</h3>
+                                    <div className="space-y-0.5">
+                                        {NAVIGATION.GENERAL.map(renderNavigationItem)}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-4">System</h3>
+                                    <div className="space-y-0.5">
+                                        {NAVIGATION.SYSTEM.map(renderNavigationItem)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Content */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                                {/* Header Search Bar Inside Right Content */}
+                                <div className="px-10 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+                                    <div className="relative max-w-2xl mx-auto md:mx-0 w-full">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#136c50] focus:border-[#136c50]"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="p-10 max-w-3xl">
+                                    {activeTab === 'account' ? (
+                                        <>
+                                            <div className="mb-8">
+                                                <h2 className="text-[16px] font-bold text-gray-900 mb-1">Account</h2>
+                                                <p className="text-[13px] text-gray-500">Real-time information and activities of your property.</p>
+                                            </div>
+
+                                            <form onSubmit={handleSubmit} className="space-y-8">
+                                                {/* Profile Picture */}
+                                                <div className="flex items-center justify-between py-6 border-y border-gray-100">
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
+                                                            {previewUrl ? (
+                                                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                            ) : currentAvatarUrl ? (
+                                                                <img src={currentAvatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Profile" className="w-full h-full object-cover" />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-sm font-semibold text-gray-900">Profile picture</h3>
+                                                            <p className="text-[13px] text-gray-500 mt-0.5">PNG, JPEG under 15MB</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors bg-white shadow-sm"
+                                                        >
+                                                            Upload new picture
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleDeleteAvatar}
+                                                            className="px-3 py-1.5 text-[13px] font-medium text-gray-600 hover:text-gray-900 border border-transparent hover:border-gray-200 hover:bg-gray-50 rounded-lg transition-colors"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                                                    </div>
+                                                </div>
+
+                                                {/* Full Name */}
+                                                <div className="py-2 border-b border-gray-100 pb-8">
+                                                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Full name</h3>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[12px] font-medium text-gray-600">First name</label>
+                                                            <input
+                                                                type="text"
+                                                                value={firstName}
+                                                                onChange={(e) => setFirstName(e.target.value)}
+                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#136c50] focus:border-[#136c50]"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[12px] font-medium text-gray-600">Last name</label>
+                                                            <input
+                                                                type="text"
+                                                                value={lastName}
+                                                                onChange={(e) => setLastName(e.target.value)}
+                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#136c50] focus:border-[#136c50]"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Contact Email */}
+                                                <div className="py-2 border-b border-gray-100 pb-8">
+                                                    <div className="mb-4">
+                                                        <h3 className="text-sm font-semibold text-gray-900 mb-0.5">Contact email</h3>
+                                                        <p className="text-[13px] text-gray-500">Manage your accounts email address for the invoices.</p>
+                                                    </div>
+                                                    <div className="flex flex-col sm:flex-row gap-4 items-end">
+                                                        <div className="space-y-1.5 flex-[2] w-full">
+                                                            <label className="text-[12px] font-medium text-gray-600">Email</label>
+                                                            <div className="relative">
+                                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                                                <input
+                                                                    type="email"
+                                                                    value={email}
+                                                                    onChange={(e) => setEmail(e.target.value)}
+                                                                    className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#136c50] focus:border-[#136c50]"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <button type="button" className="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium text-[#136c50] border border-gray-200 bg-white shadow-sm rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap h-[38px]">
+                                                            <Plus size={16} className="text-[#136c50]" />
+                                                            Add another email
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Password */}
+                                                <div className="py-2 border-b border-gray-100 pb-8">
+                                                    <div className="mb-4">
+                                                        <h3 className="text-sm font-semibold text-gray-900 mb-0.5">Password</h3>
+                                                        <p className="text-[13px] text-gray-500">Modify your current password.</p>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[12px] font-medium text-gray-600">Current password</label>
+                                                            <div className="relative">
+                                                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                                                <input
+                                                                    type={showCurrentPassword ? "text" : "password"}
+                                                                    value={currentPassword}
+                                                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                                                    placeholder="••••••••••••"
+                                                                    className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#136c50] focus:border-[#136c50]"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                                >
+                                                                    {showCurrentPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-1.5">
+                                                            <label className="text-[12px] font-medium text-gray-600">New password</label>
+                                                            <div className="relative">
+                                                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                                                <input
+                                                                    type={showNewPassword ? "text" : "password"}
+                                                                    value={newPassword}
+                                                                    onChange={(e) => setNewPassword(e.target.value)}
+                                                                    placeholder="••••••••••••"
+                                                                    className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#136c50] focus:border-[#136c50]"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                                >
+                                                                    {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Integrated account */}
+                                                <div className="py-2 mb-4">
+                                                    <div className="mb-4">
+                                                        <h3 className="text-sm font-semibold text-gray-900 mb-0.5">Integrated account</h3>
+                                                        <p className="text-[13px] text-gray-500">Manage your current integrated accounts.</p>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center justify-between p-3.5 border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                                                                    {/* Simple logo placeholder for google analytics */}
+                                                                    <div className="flex items-end gap-[2px] h-4">
+                                                                        <div className="w-1.5 h-2 bg-yellow-400 rounded-sm"></div>
+                                                                        <div className="w-1.5 h-3 bg-red-400 rounded-sm"></div>
+                                                                        <div className="w-1.5 h-4 bg-orange-400 rounded-sm"></div>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-[13px] font-bold text-gray-900">Google analytics</h4>
+                                                                    <p className="text-[12px] text-gray-500 mt-0.5">Navigate the Google Analytics interface and reports.</p>
+                                                                </div>
+                                                            </div>
+                                                            <button type="button" className="px-3 py-1 text-[12px] font-semibold text-[#136c50] bg-white border border-gray-200 shadow-sm rounded-lg hover:bg-gray-50">
+                                                                Connected
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between p-3.5 border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                                                                    <div className="w-5 h-5 rounded-full border-2 border-red-500 border-t-yellow-400 border-r-green-500 border-b-blue-500"></div>
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-[13px] font-bold text-gray-900">Google analytics</h4>
+                                                                    <p className="text-[12px] text-gray-500 mt-0.5">Navigate the Google Analytics interface and reports.</p>
+                                                                </div>
+                                                            </div>
+                                                            <button type="button" className="px-3 py-1 text-[12px] font-semibold text-[#136c50] bg-white border border-gray-200 shadow-sm rounded-lg hover:bg-gray-50">
+                                                                Connected
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Messages */}
+                                                {error && <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">{error}</div>}
+                                                {message && <div className="p-3 text-sm text-[#136c50] bg-[#e7f5f0] border border-[#aae0cb] rounded-lg">{message}</div>}
+
+                                                {/* Bottom Actions */}
+                                                <div className="pt-6 flex justify-end gap-3 sticky bottom-0 bg-white pb-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={onClose}
+                                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={loading}
+                                                        className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:opacity-50 shadow-sm transition-colors"
+                                                    >
+                                                        {loading ? "Saving..." : "Save changes"}
+                                                    </button>
+                                                </div>
+
+                                            </form>
+                                        </>
+                                    ) : activeTab === 'meetings' ? (
+                                        <div className="mb-8">
+                                            <h2 className="text-[16px] font-bold text-gray-900 mb-1">Meetings History</h2>
+                                            <p className="text-[13px] text-gray-500">View all the Daily.co meetings you have attended in the metaverse.</p>
+
+                                            <div className="mt-8 space-y-4">
+                                                {loadingHistory ? (
+                                                    <div className="text-sm text-gray-500">Loading history...</div>
+                                                ) : meetingsHistory.length === 0 ? (
+                                                    <div className="text-sm text-gray-500 p-6 border border-gray-100 rounded-xl bg-gray-50 text-center">No meetings attended yet.</div>
+                                                ) : (
+                                                    meetingsHistory.map(meeting => (
+                                                        <div key={meeting._id} className="p-4 border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                            <div className="flex items-start gap-4">
+                                                                <div className="w-10 h-10 rounded-full bg-[#e7f5f0] flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
+                                                                    <Video size={18} className="text-[#136c50]" />
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-sm font-bold text-gray-900">{meeting.roomName}</h4>
+                                                                    <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 font-medium">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <Calendar size={13} className="text-gray-400" />
+                                                                            {new Date(meeting.joinTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
+                                                                            <Clock size={13} className="text-gray-400" />
+                                                                            {Math.floor(meeting.duration / 60)}m {meeting.duration % 60}s
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-zinc-600">This is your display name in the virtual world.</p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-                                            <Mail size={16} /> Email Address
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="email"
-                                                required
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#9b99fe]/50 focus:border-[#9b99fe] transition-all"
-                                                placeholder="Enter your email"
-                                            />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-[50vh] text-gray-400 flex-col">
+                                            <Settings size={40} className="mb-4 opacity-50" />
+                                            <h3 className="text-base font-medium text-gray-800 mb-1">Coming Soon</h3>
+                                            <p className="text-sm">Settings for this section will be available here.</p>
                                         </div>
-                                    </div>
-
-                                    {/* Status Messages */}
-                                    <div className="min-h-[24px]">
-                                        {error && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-                                                className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2"
-                                            >
-                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> {error}
-                                            </motion.div>
-                                        )}
-                                        {message && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-                                                className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-2"
-                                            >
-                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> {message}
-                                            </motion.div>
-                                        )}
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="pt-6 flex gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={onClose}
-                                            className="px-6 py-3 rounded-xl border border-zinc-700 text-zinc-300 font-medium hover:bg-zinc-800 transition-colors flex-1"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="px-6 py-3 rounded-xl bg-[#9b99fe] text-black font-semibold hover:bg-[#8886fc] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-[2] flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
-                                        >
-                                            {loading ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={18} /> Saving...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Save size={18} /> Save Changes
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </form>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </motion.div>

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { X, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const MeetingModal = () => {
+    const { token } = useAuth();
     const [zone, setZone] = useState(null); // { zoneId, zoneName }
     const [meetingUrl, setMeetingUrl] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [recordId, setRecordId] = useState(null);
 
     const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3001';
 
@@ -46,6 +49,19 @@ const MeetingModal = () => {
             if (response.data && response.data.url) {
                 setMeetingUrl(response.data.url);
                 window.dispatchEvent(new CustomEvent('meeting-status-change', { detail: { active: true } }));
+
+                try {
+                    const trackRes = await axios.post(`${serverUrl}/api/meeting/join`, {
+                        roomName: zone.zoneName || zone.zoneId
+                    }, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (trackRes.data.recordId) {
+                        setRecordId(trackRes.data.recordId);
+                    }
+                } catch (e) {
+                    console.error("Failed to track meeting join:", e);
+                }
             } else {
                 setError("Failed to get meeting URL");
             }
@@ -60,11 +76,22 @@ const MeetingModal = () => {
         }
     };
 
-    const closeMeeting = () => {
+    const closeMeeting = async () => {
         if (meetingUrl) {
             if (window.confirm("Disconnect from meeting?")) {
                 setMeetingUrl(null);
                 window.dispatchEvent(new CustomEvent('meeting-status-change', { detail: { active: false } }));
+
+                if (recordId) {
+                    try {
+                        await axios.post(`${serverUrl}/api/meeting/leave`, { recordId }, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        setRecordId(null);
+                    } catch (e) {
+                        console.error("Failed to track meeting leave:", e);
+                    }
+                }
             }
         } else {
             setZone(null);

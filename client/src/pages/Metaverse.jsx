@@ -17,6 +17,7 @@ import ZoomControls from "../components/ZoomControls"; // Import
 import Minimap from "../components/Minimap"; // Import
 import PlayerLabels from "../components/PlayerLabels"; // Import
 import MeetingModal from "../components/MeetingModal"; // Import meeting modal
+import FPSCounter from "../components/FPSCounter"; // Import FPS Counter
 
 function Metaverse() {
     const { user } = useAuth();
@@ -53,6 +54,9 @@ function Metaverse() {
 
                 {/* New Server Stats Widget */}
                 <ServerStats />
+
+                {/* Debug FPS Counter */}
+                <FPSCounter />
 
                 {/* Manual Zoom Controls */}
                 <ZoomControls />
