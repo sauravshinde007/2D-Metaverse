@@ -274,11 +274,16 @@ export default class PlayerManager {
 
         this.player.anims.play(this.currentAnimation, true);
 
-        // Update React Labels (New)
-        this.updatePlayerLabels();
+        // Calculate time for throttling
+        const now = Date.now();
+
+        // Update React Labels (Throttled to 30fps to prevent massive GC allocating and DOM overhead)
+        if (!this.lastLabelsUpdate || now - this.lastLabelsUpdate >= 33) {
+            this.updatePlayerLabels();
+            this.lastLabelsUpdate = now;
+        }
 
         // Limit Minimap Updates (10fps is enough)
-        const now = Date.now();
         if (!this.lastMinimapUpdate || now - this.lastMinimapUpdate > 100) {
             // 📡 Dispatch Minimap Data
             const otherPlayers = Object.keys(this.players).map(id => ({

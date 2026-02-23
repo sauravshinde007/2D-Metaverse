@@ -11,6 +11,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
     // Meetings State
     const [meetingsHistory, setMeetingsHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [viewMomContent, setViewMomContent] = useState(null);
 
     // Account State
     const [firstName, setFirstName] = useState("");
@@ -51,23 +52,49 @@ export default function UserSettingsModal({ isOpen, onClose }) {
     }, [user, isOpen]);
 
     useEffect(() => {
+        let interval;
         if (activeTab === 'meetings' && isOpen) {
             const fetchHistory = async () => {
-                setLoadingHistory(true);
                 try {
                     const res = await axios.get(`${serverUrl}/api/meeting/history`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     setMeetingsHistory(res.data.history || []);
                 } catch (e) {
-                    console.error("Failed to load meetings history:", e);
+                    if (e.response && e.response.status === 401) {
+                        console.warn("Session expired on meetings history fetch");
+                        // Optional: could call logout() here if imported
+                    } else {
+                        console.error("Failed to load meetings history:", e);
+                    }
                 } finally {
                     setLoadingHistory(false);
                 }
             };
+            setLoadingHistory(true);
             fetchHistory();
+
+            interval = setInterval(() => {
+                fetchHistory(); // Poll every 5s for MOM status updates
+            }, 5000);
         }
+        return () => {
+            if (interval) clearInterval(interval);
+            setViewMomContent(null);
+        };
     }, [activeTab, serverUrl, token, isOpen]);
+
+    const handleGenerateMOM = async (recordId) => {
+        try {
+            setMeetingsHistory(prev => prev.map(m => m._id === recordId ? { ...m, momStatus: 'Generating' } : m));
+            await axios.post(`${serverUrl}/api/meeting/${recordId}/generate-mom`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (e) {
+            console.error("Failed to start MOM generation:", e);
+            alert(e.response?.data?.error || "Failed to start MOM generation");
+        }
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -462,29 +489,71 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                                                     <div className="text-sm text-gray-500 p-6 border border-gray-100 rounded-xl bg-gray-50 text-center">No meetings attended yet.</div>
                                                 ) : (
                                                     meetingsHistory.map(meeting => (
-                                                        <div key={meeting._id} className="p-4 border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                            <div className="flex items-start gap-4">
-                                                                <div className="w-10 h-10 rounded-full bg-[#e7f5f0] flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
-                                                                    <Video size={18} className="text-[#136c50]" />
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className="text-sm font-bold text-gray-900">{meeting.roomName}</h4>
-                                                                    <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 font-medium">
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <Calendar size={13} className="text-gray-400" />
-                                                                            {new Date(meeting.joinTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
-                                                                            <Clock size={13} className="text-gray-400" />
-                                                                            {Math.floor(meeting.duration / 60)}m {meeting.duration % 60}s
+                                                        <div key={meeting._id} className="p-4 border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] bg-white flex flex-col gap-4">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                                <div className="flex items-start gap-4">
+                                                                    <div className="w-10 h-10 rounded-full bg-[#e7f5f0] flex items-center justify-center flex-shrink-0 mt-1 sm:mt-0">
+                                                                        <Video size={18} className="text-[#136c50]" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <h4 className="text-sm font-bold text-gray-900">
+                                                                            {meeting.roomName ? meeting.roomName.replace('meta-', '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Meeting Room"}
+                                                                        </h4>
+                                                                        <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 font-medium">
+                                                                            <div className="flex items-center gap-1.5">
+                                                                                <Calendar size={13} className="text-gray-400" />
+                                                                                {new Date(meeting.joinTime).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} • {new Date(meeting.joinTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
+                                                                                <Clock size={13} className="text-gray-400" />
+                                                                                {Math.floor(meeting.duration / 60)}m {meeting.duration % 60}s
+                                                                            </div>
                                                                         </div>
                                                                     </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    {(!meeting.momStatus || meeting.momStatus === 'None' || meeting.momStatus === 'Error') && (
+                                                                        <button
+                                                                            onClick={() => handleGenerateMOM(meeting._id)}
+                                                                            className="px-3 py-1.5 text-[12px] font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                                                                        >
+                                                                            Generate MOM
+                                                                        </button>
+                                                                    )}
+                                                                    {meeting.momStatus === 'Generating' && (
+                                                                        <span className="px-3 py-1.5 text-[12px] font-medium bg-yellow-100 text-yellow-800 rounded-lg flex items-center gap-1.5">
+                                                                            <div className="w-3 h-3 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                                                                            Generating...
+                                                                        </span>
+                                                                    )}
+                                                                    {meeting.momStatus === 'Generated' && (
+                                                                        <button
+                                                                            onClick={() => setViewMomContent(meeting.momContent)}
+                                                                            className="px-3 py-1.5 text-[12px] font-medium bg-[#e7f5f0] text-[#136c50] rounded-lg hover:bg-[#d0efe3] transition-colors flex items-center gap-1.5"
+                                                                        >
+                                                                            <FileText size={14} /> View MOM
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     ))
                                                 )}
                                             </div>
+
+                                            {viewMomContent && (
+                                                <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-xl relative">
+                                                    <button onClick={() => setViewMomContent(null)} className="absolute top-4 right-4 p-1.5 bg-white border border-gray-200 rounded-md text-gray-500 hover:text-gray-900 shadow-sm transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                        <FileText size={16} className="text-[#136c50]" /> Minutes of Meeting
+                                                    </h3>
+                                                    <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                                        {viewMomContent}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="flex items-center justify-center h-[50vh] text-gray-400 flex-col">

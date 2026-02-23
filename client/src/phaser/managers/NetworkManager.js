@@ -46,9 +46,11 @@ export default class NetworkManager {
                 } else {
                     // Sync my pos
                     const p = players[id];
-                    if (p.x !== undefined && p.y !== undefined) {
+                    if (p.x !== undefined && p.y !== undefined && this.playerManager.player) {
                         this.playerManager.player.setPosition(p.x, p.y);
-                        this.playerManager.playerUsernameText.setPosition(p.x, p.y - 30);
+                        if (this.playerManager.playerUsernameText) {
+                            this.playerManager.playerUsernameText.setPosition(p.x, p.y - 30);
+                        }
                     }
                     if (p.role) {
                         this.myRole = p.role;
@@ -143,7 +145,7 @@ export default class NetworkManager {
     }
 
     handleProximityCalls(data) {
-        if (!this.scene.sys.isActive()) return;
+        if (!this.scene.sys.isActive() || !peerService.peer) return;
         const newNearbyIds = new Set(data.nearbyPlayers.map((p) => p.id));
 
         // End calls (Grace period)

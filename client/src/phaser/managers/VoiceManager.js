@@ -12,6 +12,10 @@ export default class VoiceManager {
         this.isProximityMode = false;
         this.localVideoEnabled = false;
 
+        // Cache canvas rect to prevent severe 60FPS layout thrashing!
+        this.canvasRect = null;
+        this.lastCanvasRectUpdate = 0;
+
         // We rely on socket events triggering methods here via NetworkManager
     }
 
@@ -199,9 +203,14 @@ export default class VoiceManager {
         if (this.myVideoElement && player) {
             const vid = this.myVideoElement;
 
-            // Calculate screen position
-            const canvas = this.scene.game.canvas;
-            const rect = canvas.getBoundingClientRect();
+            // Read bounding rect efficiently (throttle the expensive DOM read!)
+            const now = Date.now();
+            if (!this.canvasRect || now - this.lastCanvasRectUpdate > 1000) {
+                this.canvasRect = this.scene.game.canvas.getBoundingClientRect();
+                this.lastCanvasRectUpdate = now;
+            }
+
+            const rect = this.canvasRect;
             const zoom = camera.zoom;
 
             const screenX = (player.x - camera.worldView.x) * zoom;

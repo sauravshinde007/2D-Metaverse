@@ -2,6 +2,7 @@ import express from "express";
 import axios from "axios";
 import authMiddleware from "../middleware/auth.js";
 import MeetingRecord from "../models/MeetingRecord.js";
+import { addMomJob } from "../services/momQueue.js";
 
 const router = express.Router();
 
@@ -119,19 +120,44 @@ router.post("/create", async (req, res) => {
 // Track Meetings
 // ================================
 
+import crypto from "crypto";
+
 router.post("/join", authMiddleware, async (req, res) => {
     try {
         const { roomName } = req.body;
         const userId = req.userData.userId;
 
-        const record = new MeetingRecord({
+        // Find an active meeting in this room (within the last 4 hours)
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+        const activeMeeting = await MeetingRecord.findOne({
+            roomName: roomName,
+            joinTime: { $gte: fourHoursAgo },
+            leaveTime: { $exists: false } // Still inside the meeting
+        }).sort({ joinTime: -1 });
+
+        const sessionId = activeMeeting && activeMeeting.sessionId
+            ? activeMeeting.sessionId
+            : crypto.randomUUID();
+
+        // Also check if they ALREADY have a record (in case of reconnection)
+        let record = await MeetingRecord.findOne({
             user: userId,
             roomName: roomName,
-            joinTime: new Date()
+            leaveTime: { $exists: false },
+            joinTime: { $gte: fourHoursAgo }
         });
-        await record.save();
 
-        return res.json({ recordId: record._id });
+        if (!record) {
+            record = new MeetingRecord({
+                sessionId: sessionId,
+                user: userId,
+                roomName: roomName,
+                joinTime: new Date()
+            });
+            await record.save();
+        }
+
+        return res.json({ recordId: record._id, sessionId: record.sessionId });
     } catch (error) {
         console.error("Meeting join error:", error);
         return res.status(500).json({ error: "Failed to record meeting join" });
@@ -168,6 +194,44 @@ router.get("/history", authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("Meeting history fetch error:", error);
         return res.status(500).json({ error: "Failed to fetch meeting history" });
+    }
+});
+
+// ================================
+// Generate MOM
+// ================================
+
+router.post("/:recordId/generate-mom", authMiddleware, async (req, res) => {
+    try {
+        const { recordId } = req.params;
+        const userId = req.userData.userId;
+
+        const record = await MeetingRecord.findOne({ _id: recordId, user: userId });
+        if (!record) return res.status(404).json({ error: "Meeting record not found" });
+
+        if (record.momStatus === 'Generating' || record.momStatus === 'Generated') {
+            return res.status(400).json({ error: "MOM is already generated or generating" });
+        }
+
+        const targetSessionId = record.sessionId;
+
+        // Update all meeting records in this exact same session across ALL users!
+        if (targetSessionId) {
+            await MeetingRecord.updateMany(
+                { sessionId: targetSessionId },
+                { $set: { momStatus: 'Generating' } }
+            );
+        } else {
+            record.momStatus = 'Generating';
+            await record.save();
+        }
+
+        await addMomJob(record._id, record.roomName, targetSessionId);
+
+        return res.json({ message: "MOM generation started", status: "Generating" });
+    } catch (error) {
+        console.error("MOM generation error:", error);
+        return res.status(500).json({ error: "Failed to start MOM generation" });
     }
 });
 

@@ -23,6 +23,7 @@ import configurePassport from './config/passport.js';
 import User from './models/User.js'; // Import statically
 import { syncUsersBatch } from "./services/streamService.js";
 import meetingRoutes from "./routes/meetingRoutes.js";
+import "./services/momWorker.js"; // Initialize MOM Worker
 
 const app = express();
 app.use(cors());
