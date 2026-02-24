@@ -3,7 +3,11 @@ import Redis from 'ioredis';
 import axios from 'axios';
 import Groq from 'groq-sdk';
 import MeetingRecord from '../models/MeetingRecord.js';
+import MeetingTranscript from '../models/MeetingTranscript.js';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 dotenv.config();
 
@@ -11,8 +15,8 @@ dotenv.config();
 const groqApiKey = process.env.GROQ_API_KEY || 'dummy_key';
 const groq = new Groq({ apiKey: groqApiKey });
 
-const DAILY_API_KEY = process.env.DAILY_API_KEY;
-const DAILY_BASE_URL = "https://api.daily.co/v1";
+// LiveKit handles transcripts via Agents or Egress. 
+// For this setup without an active Egress service, we will rely on our mock transcript.
 
 const redisConnection = new Redis({
     host: process.env.REDIS_HOST || '127.0.0.1',
@@ -23,80 +27,121 @@ const redisConnection = new Redis({
 export const momWorker = new Worker('momQueue', async job => {
     const { recordId, roomName, sessionId } = job.data;
 
-    const finalizeMOM = async (status, content) => {
+    const finalizeMOM = async (status, content, transcript = null) => {
+        const updateParams = { momStatus: status, momContent: content };
+        if (transcript) updateParams.transcriptContent = transcript;
+
         if (sessionId) {
             await MeetingRecord.updateMany(
                 { sessionId: sessionId },
-                { $set: { momStatus: status, momContent: content } }
+                { $set: updateParams }
             );
         } else {
-            await MeetingRecord.findByIdAndUpdate(recordId, {
-                momStatus: status,
-                momContent: content
-            });
+            await MeetingRecord.findByIdAndUpdate(recordId, updateParams);
         }
     };
 
     try {
         let transcriptText = '';
 
-        try {
-            // 1. Fetch transcripts from Daily
-            const transcriptRes = await axios.get(`${DAILY_BASE_URL}/transcript?room_name=${roomName}`, {
-                headers: { Authorization: `Bearer ${DAILY_API_KEY}` }
-            });
+        // 1. Fetch transcript chunks
+        if (sessionId) {
+            const meetingsDir = path.join(os.tmpdir(), "metaverse_meetings");
 
-            if (transcriptRes.data.data && transcriptRes.data.data.length > 0) {
-                const latestTranscript = transcriptRes.data.data[0];
-                const linkRes = await axios.get(`${DAILY_BASE_URL}/transcript/${latestTranscript.id}/access-link`, {
-                    headers: { Authorization: `Bearer ${DAILY_API_KEY}` }
-                });
+            // Look for unbroken raw uploaded WebM streams inside the tmp directory (per user)
+            if (fs.existsSync(meetingsDir)) {
+                const files = fs.readdirSync(meetingsDir).filter(f => f.startsWith(`${sessionId}_`));
+                for (const file of files) {
+                    const fullPath = path.join(meetingsDir, file);
+                    // Extract username from "sessionId_username.webm"
+                    const usernameExt = file.replace(`${sessionId}_`, '');
+                    const parsedUsername = usernameExt.replace('.webm', '');
 
-                const vttUrl = linkRes.data.link;
-                if (vttUrl) {
-                    const vttRes = await axios.get(vttUrl);
-                    transcriptText = vttRes.data; // VTT text
-                    console.log(`✅ Successfully fetched Daily.co transcript: ${transcriptText.substring(0, 100)}...`);
+                    try {
+                        const stream = fs.createReadStream(fullPath);
+                        const transcription = await groq.audio.transcriptions.create({
+                            file: stream,
+                            model: "whisper-large-v3",
+                            prompt: "This is a real-time conversation from a metaverse meeting. Please transcribe the speech accurately. If the audio is completely silent or only contains background noise, do not transcribe anything.",
+                            temperature: 0.1,
+                            language: "en",
+                        });
+
+                        let text = transcription.text.trim();
+
+                        // Ignore WebM silence hallucinations
+                        const hallucinations = ["Thank you.", "Thank you", "Thank you...", ".", "...", "you", "You.", "You", "you.", "Bye.", "Bye", "[Silence]", "[BLANK_AUDIO]"];
+                        if (hallucinations.includes(text)) text = "";
+
+                        if (text && text.length > 3) {
+                            transcriptText += `\n${parsedUsername}: ${text}`;
+                        }
+                    } catch (e) {
+                        console.error(`Failed to completely transcribe file ${file}:`, e);
+                    }
                 }
             }
-        } catch (apiError) {
-            console.log('Could not fetch daily.co transcript from API:', apiError.response?.data || apiError.message);
-        }
 
-        // If Daily.co has no transcript for this room, use a mock transcript for demonstration
-        // so the feature actually 'works' in UX even without daily.co configured for transcriptions.
-        if (!transcriptText) {
-            transcriptText = "Host: Hi everyone, thanks for joining.\nParticipant: We should discuss our plan for the metaverse project.\nHost: Let's implement the BullMQ and Redis for MOM generation.\nParticipant: Great, I'll start with the Queue.\nHost: Okay, meeting adjourned.";
+            // Fallback: If no valid tmp stream files exist, fallback to the legacy db snippets
+            if (!transcriptText || transcriptText.trim() === '') {
+                const transcripts = await MeetingTranscript.find({ sessionId }).sort({ timestamp: 1 });
+                if (transcripts && transcripts.length > 0) {
+                    transcriptText = transcripts.map(t => `${t.username}: ${t.text}`).join("\n");
+                }
+            }
         }
 
         // 2. Generate MOM using Groq
+        if (!transcriptText || transcriptText.trim().length === 0) {
+            await finalizeMOM('Generated', "No conversation was recorded during this meeting.", transcriptText);
+            console.log(`MOM generated successfully (Empty Transcript) for session ${sessionId}`);
+            return;
+        }
+
         if (groqApiKey === 'dummy_key' || groqApiKey === 'gsk_your_groq_api_key_here') {
             // Simulate MOM generation if key is fake
             await new Promise(res => setTimeout(res, 2000));
-            const momContent = "**Mock MOM (Groq API Key missing):**\n- **Objective**: Implement MOM generation using BullMQ & Redis.\n- **Decisions**: We will use Daily.co transcripts (or simulate them).\n- **Action Items**: Set up BullMQ Queue and Worker.";
+            const momContent = `**Mock MOM (Groq API Key missing):**\n- **Objective**: Implement MOM generation using BullMQ & Redis.\n- **Action Items**: Set up BullMQ Queue and Worker.\n\n_Transcript Received:_\n${transcriptText}`;
 
-            await finalizeMOM('Generated', momContent);
+            await finalizeMOM('Generated', momContent, transcriptText);
             console.log(`Mock MOM generated successfully for session ${sessionId} (record ${recordId})`);
             return;
         }
 
-        const prompt = `Please generate Minutes of Meeting (MOM) for the following transcript. Summarize key points, action items, and decisions made. Return the MOM formatted cleanly in Markdown.\n\nTranscript:\n${transcriptText}`;
+        const prompt = `You are an expert executive assistant. Generate Minutes of Meeting (MOM) for the following transcript. If the transcript is a speech, monologue, or informal discussion, summarize its core themes and key takeaways instead of forcing formal meeting structures.
+
+Format the output cleanly in Markdown, following this structure:
+### 📌 Meeting Summary
+[A concise paragraph summarizing the entire conversation or speech]
+
+### 💡 Key Points Discussed
+- [Bullet points of main ideas, themes, or topics covered]
+
+### ✅ Action Items / Next Steps (If applicable)
+- [Bullet points of tasks or actionable takeaways. If none exist, simply write "No specific action items required."]
+
+### 🎯 Decisions Made (If applicable)
+- [List any firm decisions. If none, do not include this section or write "N/A"]
+
+Transcript:
+${transcriptText}`;
 
         const groqRes = await groq.chat.completions.create({
-            messages: [{ role: 'user', content: prompt }],
+            messages: [{ role: 'system', content: 'You are a meticulous assistant.' }, { role: 'user', content: prompt }],
             model: 'llama-3.1-8b-instant',
+            temperature: 0.3,
         });
 
         const momContent = groqRes.choices[0]?.message?.content || 'Failed to generate content.';
 
         // 3. Save to DB
-        await finalizeMOM('Generated', momContent);
+        await finalizeMOM('Generated', momContent, transcriptText);
 
         console.log(`MOM generated successfully for session ${sessionId} (record ${recordId})`);
 
     } catch (err) {
         console.error(`Failed to generate MOM for ${recordId}:`, err);
-        await finalizeMOM('Error', null);
+        await finalizeMOM('Error', null, null);
         throw err;
     }
 }, { connection: redisConnection });

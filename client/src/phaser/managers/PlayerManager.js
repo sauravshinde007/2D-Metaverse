@@ -78,6 +78,17 @@ export default class PlayerManager {
         if (this.mapManager.layers.walls) this.scene.physics.add.collider(this.player, this.mapManager.layers.walls);
         if (this.mapManager.layers.props) this.scene.physics.add.collider(this.player, this.mapManager.layers.props);
 
+        // Username text
+        this.playerUsernameText = this.scene.add
+            .text(x, y - 30, "You", {
+                fontFamily: 'Inter',
+                fontSize: "14px", fill: "#90EE90", fontStyle: "bold",
+                stroke: "#000000", strokeThickness: 3,
+            })
+            .setOrigin(0.5)
+            .setResolution(2)
+            .setDepth(6);
+
         this.createMobileJoystick();
     }
 
@@ -85,7 +96,15 @@ export default class PlayerManager {
         if (this.players[id]) this.players[id].destroy();
 
         const sprite = this.scene.add.sprite(0, 0, "ash");
-        const container = this.scene.add.container(data.x, data.y, [sprite]);
+        const nameText = this.scene.add.text(0, -30, data.username, {
+            fontFamily: 'Inter',
+            fontSize: "14px", fill: "#ffffff", fontStyle: "bold",
+            stroke: "#000000", strokeThickness: 3,
+        })
+            .setOrigin(0.5)
+            .setResolution(2);
+
+        const container = this.scene.add.container(data.x, data.y, [sprite, nameText]);
 
         // Glow
         const remoteGlow = sprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
@@ -113,6 +132,7 @@ export default class PlayerManager {
     moveRemotePlayer(id, pos, anim) {
         const container = this.players[id];
         if (container) {
+            this.scene.tweens.killTweensOf(container); // Prevent overlaps from building up!
             this.scene.tweens.add({
                 targets: container,
                 x: pos.x,
@@ -277,10 +297,9 @@ export default class PlayerManager {
         // Calculate time for throttling
         const now = Date.now();
 
-        // Update React Labels (Throttled to 30fps to prevent massive GC allocating and DOM overhead)
-        if (!this.lastLabelsUpdate || now - this.lastLabelsUpdate >= 33) {
-            this.updatePlayerLabels();
-            this.lastLabelsUpdate = now;
+        // Update text position
+        if (this.playerUsernameText) {
+            this.playerUsernameText.setPosition(this.player.x, this.player.y - 30);
         }
 
         // Limit Minimap Updates (10fps is enough)
@@ -308,62 +327,7 @@ export default class PlayerManager {
         }
     }
 
-    updatePlayerLabels() {
-        if (!this.player) return;
 
-        const camera = this.scene.cameras.main;
-        const labels = [];
-
-        // Helper to project world to screen
-        // We calculate relative to canvas DOM element
-        const getScreenPos = (wx, wy) => {
-            // worldView check
-            if (!camera.worldView.contains(wx, wy)) return null;
-
-            // Convert to screen
-            // (WorldX - CameraScrollX) * Zoom = ScreenX
-            // Note: If roundPixels is on, we might want to floor this manually?
-            // Actually, for CSS transform, float is fine, browser handles subpixel reflow.
-            const sx = (wx - camera.worldView.x) * camera.zoom;
-            const sy = (wy - camera.worldView.y) * camera.zoom;
-            return { x: sx, y: sy };
-        };
-
-        // 1. Local Player
-        const localPos = getScreenPos(this.player.x, this.player.y);
-        if (localPos) {
-            labels.push({
-                id: 'me',
-                username: 'You',
-                x: localPos.x + (5 * camera.zoom),
-                y: localPos.y - (25 * camera.zoom), // Offset scaled by zoom
-                isLocal: true
-            });
-        }
-
-        // 2. Remote Players
-        // this.players[id] is a Container {x, y, list...}
-        Object.keys(this.players).forEach(id => {
-            const container = this.players[id];
-            const pos = getScreenPos(container.x, container.y);
-            if (pos) {
-                const username = this.playerUsernames.get(id) || "Player";
-                labels.push({
-                    id: id,
-                    username: username,
-                    x: pos.x + (5 * camera.zoom),
-                    y: pos.y - (25 * camera.zoom),
-                    isLocal: false
-                });
-            }
-        });
-
-        // Dispatch efficient event
-        // We use a custom event on window
-        window.dispatchEvent(new CustomEvent('player-labels-update', {
-            detail: labels
-        }));
-    }
 
     updateInteractionUI() {
         if (!this.player) return;

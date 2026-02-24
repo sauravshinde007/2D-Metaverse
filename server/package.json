@@ -23,6 +23,7 @@
     "groq-sdk": "^0.37.0",
     "ioredis": "^5.9.3",
     "jsonwebtoken": "^9.0.2",
+    "livekit-server-sdk": "^2.15.0",
     "mongoose": "^8.19.2",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",

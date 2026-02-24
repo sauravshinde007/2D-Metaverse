@@ -2,54 +2,37 @@ import express from "express";
 import axios from "axios";
 import authMiddleware from "../middleware/auth.js";
 import MeetingRecord from "../models/MeetingRecord.js";
+import MeetingTranscript from "../models/MeetingTranscript.js";
 import { addMomJob } from "../services/momQueue.js";
+import multer from "multer";
+import os from "os";
+import fs from "fs";
+import path from "path";
+import Groq from "groq-sdk";
+
+const upload = multer({ dest: os.tmpdir() });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'devkey' });
+
 
 const router = express.Router();
 
-const DAILY_API_KEY = process.env.DAILY_API_KEY;
-const DAILY_BASE_URL = "https://api.daily.co/v1";
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY || "devkey";
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET || "secret";
+const LIVEKIT_URL = process.env.LIVEKIT_URL || "ws://localhost:7880";
 
 // ================================
 // Create / Get Meeting Room
 // ================================
 // ================================
-// Configure Daily Domain (Run Once)
+// Create / Get Meeting Token
 // ================================
-router.post("/config-domain", async (req, res) => {
-    try {
-        const response = await axios.patch(
-            `${DAILY_BASE_URL}/domain`,
-            {
-                properties: {
-                    enable_chat: true,
-                    enable_screenshare: true,
-                    enable_prejoin_ui: true,
-                    start_audio_off: false,
-                    start_video_off: false,
-                    eject_at_room_exp: true,
-                },
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${DAILY_API_KEY}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
 
-        res.json(response.data);
-    } catch (error) {
-        console.error("Domain config error:", error.response?.data);
+import { AccessToken } from 'livekit-server-sdk';
 
-        res.status(500).json({
-            error: "Failed to configure domain",
-        });
-    }
-});
-
-router.post("/create", async (req, res) => {
+router.post("/create", authMiddleware, async (req, res) => {
     try {
         const { roomId } = req.body;
+        const participantName = req.userData.username;
 
         if (!roomId) {
             return res.status(400).json({
@@ -58,60 +41,26 @@ router.post("/create", async (req, res) => {
         }
 
         // Unique room name
-        const dailyRoomName = `meta-${roomId}`;
+        const livekitRoomName = `meta-${roomId}`;
 
-        // Try getting existing room
-        let room;
+        // Create a new token for the participant
+        const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+            identity: participantName,
+        });
 
-        try {
-            const existing = await axios.get(
-                `${DAILY_BASE_URL}/rooms/${dailyRoomName}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${DAILY_API_KEY}`,
-                    },
-                }
-            );
-
-            room = existing.data;
-
-            console.log("Reusing room:", dailyRoomName);
-        } catch (err) {
-            // If not found → create new
-            console.log("Creating new room:", dailyRoomName);
-
-            const created = await axios.post(
-                `${DAILY_BASE_URL}/rooms`,
-                {
-                    name: dailyRoomName,
-                    properties: {
-                        enable_chat: true,
-                        enable_screenshare: true,
-                        start_audio_off: false,
-                        start_video_off: false,
-                        max_participants: 4, // Added based on requirement: "at max only 4 people can join"
-                    },
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${DAILY_API_KEY}`,
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-
-            room = created.data;
-        }
+        at.addGrant({ roomJoin: true, room: livekitRoomName });
+        const token = await at.toJwt();
 
         return res.json({
-            url: room.url,
-            roomName: room.name,
+            token: token,
+            url: LIVEKIT_URL,
+            roomName: livekitRoomName,
         });
     } catch (error) {
-        console.error("Daily error:", error.response?.data || error.message);
+        console.error("LiveKit error:", error.message);
 
         return res.status(500).json({
-            error: "Failed to create meeting",
+            error: "Failed to create meeting token",
         });
     }
 });
@@ -198,6 +147,43 @@ router.get("/history", authMiddleware, async (req, res) => {
 });
 
 // ================================
+// Transcribe Audio
+// ================================
+
+router.post("/transcribe", authMiddleware, upload.single('audioFile'), async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const username = req.userData.username;
+
+        if (!req.file || !sessionId) {
+            return res.status(400).json({ error: "Missing audio or sessionId" });
+        }
+
+        const meetingsDir = path.join(os.tmpdir(), "metaverse_meetings");
+        if (!fs.existsSync(meetingsDir)) {
+            fs.mkdirSync(meetingsDir, { recursive: true });
+        }
+
+        // We store an appended webm file PER USER per session. 
+        // This naturally merges the continuous WebM chunks into a single valid file stream.
+        const safeUsername = username.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const targetPath = path.join(meetingsDir, `${sessionId}_${safeUsername}.webm`);
+
+        const chunkData = fs.readFileSync(req.file.path);
+        fs.appendFileSync(targetPath, chunkData);
+
+        // Delete the multer temp file
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+        return res.json({ success: true, message: "Audio chunk stored." });
+    } catch (e) {
+        console.error("Audio chunk append error:", e);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(500).json({ error: "Audio append failed" });
+    }
+});
+
+// ================================
 // Generate MOM
 // ================================
 
@@ -210,7 +196,7 @@ router.post("/:recordId/generate-mom", authMiddleware, async (req, res) => {
         if (!record) return res.status(404).json({ error: "Meeting record not found" });
 
         if (record.momStatus === 'Generating' || record.momStatus === 'Generated') {
-            return res.status(400).json({ error: "MOM is already generated or generating" });
+            return res.json({ message: "MOM is already generated or generating", status: record.momStatus });
         }
 
         const targetSessionId = record.sessionId;

@@ -9,7 +9,8 @@ const meetingRecordSchema = new mongoose.Schema({
     leaveTime: { type: Date },
     duration: { type: Number, default: 0 }, // in seconds
     momStatus: { type: String, enum: ['None', 'Generating', 'Generated', 'Error'], default: 'None' },
-    momContent: { type: String, default: null }
+    momContent: { type: String, default: null },
+    transcriptContent: { type: String, default: null }
 }, { timestamps: true });
 
 export default mongoose.model('MeetingRecord', meetingRecordSchema);

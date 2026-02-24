@@ -245,13 +245,15 @@ export default class NetworkManager {
         candidates.forEach(cand => {
             const { id, other, dist } = cand;
             let blocked = false;
+            // Create or reuse a ray from me to them
+            if (!this.audioRay) {
+                this.audioRay = raycaster.createRay();
+            }
+            this.audioRay.setOrigin(myPlayer.x, myPlayer.y);
+            this.audioRay.setAngle(Phaser.Math.Angle.Between(myPlayer.x, myPlayer.y, other.x, other.y));
+            this.audioRay.setRayRange(dist); // Only check up to the target
 
-            // Create a ray from me to them
-            const ray = raycaster.createRay({ origin: { x: myPlayer.x, y: myPlayer.y } });
-            ray.setAngle(Phaser.Math.Angle.Between(myPlayer.x, myPlayer.y, other.x, other.y));
-            ray.setRayRange(dist); // Only check up to the target
-
-            const intersection = ray.cast();
+            const intersection = this.audioRay.cast();
 
             // If intersection exists, it means we hit a wall/obstacle
             if (intersection) {

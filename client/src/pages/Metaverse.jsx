@@ -15,7 +15,6 @@ import ServerStats from "../components/ServerStats"; // Import
 import ZoomControls from "../components/ZoomControls"; // Import
 
 import Minimap from "../components/Minimap"; // Import
-import PlayerLabels from "../components/PlayerLabels"; // Import
 import MeetingModal from "../components/MeetingModal"; // Import meeting modal
 import FPSCounter from "../components/FPSCounter"; // Import FPS Counter
 
@@ -56,7 +55,7 @@ function Metaverse() {
                 <ServerStats />
 
                 {/* Debug FPS Counter */}
-                <FPSCounter />
+                {/* <FPSCounter /> */}
 
                 {/* Manual Zoom Controls */}
                 <ZoomControls />
@@ -64,8 +63,6 @@ function Metaverse() {
                 {/* React Minimap Overlay */}
                 <Minimap />
 
-                {/* React Player Labels Overlay */}
-                <PlayerLabels />
 
                 {/* Meeting Room Modal */}
                 <MeetingModal />

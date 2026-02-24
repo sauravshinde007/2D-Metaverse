@@ -3,6 +3,7 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { X, User, CreditCard, Users, Building, FileText, Bell, Settings, Mail, Lock, Search, Plus, Eye, EyeOff, Video, Clock, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 
 export default function UserSettingsModal({ isOpen, onClose }) {
     const { user, token, setUser } = useAuth();
@@ -12,6 +13,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
     const [meetingsHistory, setMeetingsHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [viewMomContent, setViewMomContent] = useState(null);
+    const [viewTranscriptContent, setViewTranscriptContent] = useState(null);
 
     // Account State
     const [firstName, setFirstName] = useState("");
@@ -81,6 +83,7 @@ export default function UserSettingsModal({ isOpen, onClose }) {
         return () => {
             if (interval) clearInterval(interval);
             setViewMomContent(null);
+            setViewTranscriptContent(null);
         };
     }, [activeTab, serverUrl, token, isOpen]);
 
@@ -527,12 +530,22 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                                                                         </span>
                                                                     )}
                                                                     {meeting.momStatus === 'Generated' && (
-                                                                        <button
-                                                                            onClick={() => setViewMomContent(meeting.momContent)}
-                                                                            className="px-3 py-1.5 text-[12px] font-medium bg-[#e7f5f0] text-[#136c50] rounded-lg hover:bg-[#d0efe3] transition-colors flex items-center gap-1.5"
-                                                                        >
-                                                                            <FileText size={14} /> View MOM
-                                                                        </button>
+                                                                        <>
+                                                                            {meeting.transcriptContent && (
+                                                                                <button
+                                                                                    onClick={() => { setViewMomContent(null); setViewTranscriptContent(meeting.transcriptContent); }}
+                                                                                    className="px-3 py-1.5 text-[12px] font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5"
+                                                                                >
+                                                                                    <FileText size={14} /> Transcript
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={() => { setViewTranscriptContent(null); setViewMomContent(meeting.momContent); }}
+                                                                                className="px-3 py-1.5 text-[12px] font-medium bg-[#e7f5f0] text-[#136c50] rounded-lg hover:bg-[#d0efe3] transition-colors flex items-center gap-1.5"
+                                                                            >
+                                                                                <FileText size={14} /> View MOM
+                                                                            </button>
+                                                                        </>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -549,8 +562,36 @@ export default function UserSettingsModal({ isOpen, onClose }) {
                                                     <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                                                         <FileText size={16} className="text-[#136c50]" /> Minutes of Meeting
                                                     </h3>
-                                                    <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                                        {viewMomContent}
+                                                    <div className="text-sm text-gray-700 leading-relaxed max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                                                        <ReactMarkdown
+                                                            components={{
+                                                                h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-4 mt-2 text-gray-900" {...props} />,
+                                                                h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-3 mt-6 text-gray-800" {...props} />,
+                                                                h3: ({ node, ...props }) => <h3 className="text-md font-semibold mb-2 mt-4 text-gray-800" {...props} />,
+                                                                ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                                                                ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-4 space-y-1" {...props} />,
+                                                                li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+                                                                p: ({ node, ...props }) => <p className="mb-4 last:mb-0" {...props} />,
+                                                                strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+                                                                em: ({ node, ...props }) => <em className="italic text-gray-600" {...props} />
+                                                            }}
+                                                        >
+                                                            {viewMomContent}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {viewTranscriptContent && (
+                                                <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-xl relative">
+                                                    <button onClick={() => setViewTranscriptContent(null)} className="absolute top-4 right-4 p-1.5 bg-white border border-gray-200 rounded-md text-gray-500 hover:text-gray-900 shadow-sm transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                        <FileText size={16} className="text-gray-700" /> Full Meeting Transcript
+                                                    </h3>
+                                                    <div className="text-sm text-gray-700 leading-relaxed max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 whitespace-pre-wrap">
+                                                        {viewTranscriptContent}
                                                     </div>
                                                 </div>
                                             )}
