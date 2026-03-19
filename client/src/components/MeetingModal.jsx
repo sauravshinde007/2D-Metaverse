@@ -8,6 +8,8 @@ import {
     RoomAudioRenderer,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
+import ScheduleModal from './ScheduleModal';
+import socketService from '../services/socketService';
 
 const MeetingModal = () => {
     const { token } = useAuth();
@@ -17,6 +19,9 @@ const MeetingModal = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [recordId, setRecordId] = useState(null);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [isLeader, setIsLeader] = useState(false);
+    const [scheduledMeetingId, setScheduledMeetingId] = useState(null);
 
     const mediaRecorderRef = useRef(null);
     const streamRef = useRef(null);
@@ -34,10 +39,24 @@ const MeetingModal = () => {
 
         const handleLeave = (e) => {
             console.log("Left meeting zone:", e.detail);
+            
+            // If the user was in an active meeting, inform the server
+            if (window._currentRecordId) {
+                axios.post(`${serverUrl}/api/meeting/leave`, { recordId: window._currentRecordId }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                }).catch(err => console.error("Auto-leave error:", err));
+                window._currentRecordId = null;
+                window._meetingActive = false;
+            }
+
             setZone(null);
             setMeetingToken(null);
             setMeetingUrl(null);
             setError(null);
+            setRecordId(null);
+            setIsLeader(false);
+            setScheduledMeetingId(null);
+            window.dispatchEvent(new CustomEvent('meeting-status-change', { detail: { active: false } }));
         };
 
         window.addEventListener('enter-meeting-zone', handleEnter);
@@ -63,6 +82,8 @@ const MeetingModal = () => {
             if (response.data && response.data.token) {
                 setMeetingToken(response.data.token);
                 setMeetingUrl(response.data.url);
+                setIsLeader(response.data.isLeader || false);
+                setScheduledMeetingId(response.data.scheduledMeetingId || null);
                 window.dispatchEvent(new CustomEvent('meeting-status-change', { detail: { active: true } }));
 
                 try {
@@ -73,6 +94,7 @@ const MeetingModal = () => {
                     });
                     if (trackRes.data.recordId) {
                         setRecordId(trackRes.data.recordId);
+                        window._currentRecordId = trackRes.data.recordId;
                     }
 
                     if (trackRes.data.sessionId) {
@@ -144,12 +166,14 @@ const MeetingModal = () => {
                     streamRef.current.getTracks().forEach(track => track.stop());
                 }
 
-                if (recordId) {
+                if (recordId || window._currentRecordId) {
                     try {
-                        await axios.post(`${serverUrl}/api/meeting/leave`, { recordId }, {
+                        const targetRecord = recordId || window._currentRecordId;
+                        await axios.post(`${serverUrl}/api/meeting/leave`, { recordId: targetRecord }, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
                         setRecordId(null);
+                        window._currentRecordId = null;
                     } catch (e) {
                         console.error("Failed to track meeting leave:", e);
                     }
@@ -157,6 +181,21 @@ const MeetingModal = () => {
             }
         } else {
             setZone(null);
+        }
+    };
+
+    const extendMeeting = async () => {
+        if (!scheduledMeetingId) return;
+        try {
+            await axios.post(`${serverUrl}/api/meeting/extend`, {
+                scheduledMeetingId,
+                extraMinutes: 15
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            alert("⏰ Meeting extended by 15 minutes!");
+        } catch (err) {
+            alert("Failed to extend meeting: " + (err.response?.data?.error || err.message));
         }
     };
 
@@ -191,7 +230,15 @@ const MeetingModal = () => {
                             <div>Setting up secure line...</div>
                         </div>
                     ) : meetingToken ? (
-                        <div className="w-full h-full" data-lk-theme="default">
+                        <div className="w-full h-full relative" data-lk-theme="default">
+                            {isLeader && scheduledMeetingId && (
+                                <button 
+                                    onClick={extendMeeting}
+                                    className="absolute z-50 top-4 left-4 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-purple-900/50 transition-all border border-purple-400"
+                                >
+                                    +15 Mins
+                                </button>
+                            )}
                             <LiveKitRoom
                                 video={true}
                                 audio={true}
@@ -220,18 +267,40 @@ const MeetingModal = () => {
                                 </div>
                             )}
 
-                            <button
-                                onClick={startMeeting}
-                                className="w-full px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 
-                                         text-white font-bold rounded-xl shadow-lg shadow-cyan-900/20 
-                                         transform hover:scale-[1.02] transition-all duration-200"
-                            >
-                                Enter Meeting Room
-                            </button>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={startMeeting}
+                                    className="w-full px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 
+                                            text-white font-bold rounded-xl shadow-lg shadow-cyan-900/20 
+                                            transform hover:scale-[1.02] transition-all duration-200"
+                                >
+                                    Enter Meeting Room
+                                </button>
+
+                                <button
+                                    onClick={() => setShowScheduleModal(true)}
+                                    className="w-full px-8 py-3 bg-gray-800 hover:bg-gray-700
+                                            text-gray-300 font-bold rounded-xl shadow-lg border border-gray-600 
+                                            transform hover:scale-[1.02] transition-all duration-200"
+                                >
+                                    Schedule a Meeting Here
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
+
+            {showScheduleModal && (
+                <ScheduleModal 
+                    zone={zone} 
+                    onClose={() => setShowScheduleModal(false)}
+                    onSuccess={() => {
+                        setShowScheduleModal(false);
+                        alert("Meeting successfully scheduled!");
+                    }}
+                />
+            )}
         </div>
     );
 };

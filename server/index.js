@@ -71,6 +71,7 @@ mongoose
 
 // --- Socket.IO ---
 const io = new Server(server, { cors: { origin: "*" } });
+app.set("io", io);
 
 // --- API Routes ---
 app.use("/api/auth", authRoutes);        // Authentication routes (signup/login)

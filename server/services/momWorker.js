@@ -4,6 +4,7 @@ import axios from 'axios';
 import Groq from 'groq-sdk';
 import MeetingRecord from '../models/MeetingRecord.js';
 import MeetingTranscript from '../models/MeetingTranscript.js';
+import User from '../models/User.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -62,7 +63,7 @@ export const momWorker = new Worker('momQueue', async job => {
                         const transcription = await groq.audio.transcriptions.create({
                             file: stream,
                             model: "whisper-large-v3",
-                            prompt: "This is a real-time conversation from a metaverse meeting. Please transcribe the speech accurately. If the audio is completely silent or only contains background noise, do not transcribe anything.",
+                            prompt: "This is a real-time conversation from a metaverse meeting. Please transcribe the speech accurately. Focus only on the spoken words. Please ignore background noise, and do not include repetitive words or any meta-commentary.",
                             temperature: 0.1,
                             language: "en",
                         });
@@ -91,6 +92,40 @@ export const momWorker = new Worker('momQueue', async job => {
             }
         }
 
+        // 1.5 Extract Timeline and Participants
+        let meetingDate = "Unknown Date";
+        let durationMinutes = 0;
+        let participantNames = ["Unknown"];
+
+        if (sessionId) {
+            try {
+                const records = await MeetingRecord.find({ sessionId }).populate('user', 'username');
+                if (records.length > 0) {
+                    const startTimes = records.map(r => r.joinTime).filter(Boolean);
+                    const endTimes = records.map(r => r.leaveTime || new Date()).filter(Boolean);
+                    
+                    if (startTimes.length > 0) {
+                        const minStartTime = new Date(Math.min(...startTimes));
+                        const maxEndTime = new Date(Math.max(...endTimes));
+                        meetingDate = minStartTime.toLocaleString();
+                        durationMinutes = Math.max(1, Math.round((maxEndTime - minStartTime) / 60000));
+                    }
+
+                    const uniqueUsers = new Set();
+                    records.forEach(r => {
+                        if (r.user && r.user.username) {
+                            uniqueUsers.add(r.user.username);
+                        }
+                    });
+                    if (uniqueUsers.size > 0) {
+                        participantNames = Array.from(uniqueUsers);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching meeting timeline info:", err);
+            }
+        }
+
         // 2. Generate MOM using Groq
         if (!transcriptText || transcriptText.trim().length === 0) {
             await finalizeMOM('Generated', "No conversation was recorded during this meeting.", transcriptText);
@@ -110,7 +145,18 @@ export const momWorker = new Worker('momQueue', async job => {
 
         const prompt = `You are an expert executive assistant. Generate Minutes of Meeting (MOM) for the following transcript. If the transcript is a speech, monologue, or informal discussion, summarize its core themes and key takeaways instead of forcing formal meeting structures.
 
-Format the output cleanly in Markdown, following this structure:
+CRITICAL INSTRUCTIONS:
+1. DO NOT mention any issues with the transcript, transcript quality, voice confusion, repetitions, or any difficulties you had in understanding the text.
+2. DO NOT apologize or include meta-commentary about the transcription process.
+3. Just provide the final, polished Minutes of Meeting based ON the text provided.
+
+Format the output cleanly in Markdown, following exactly this structure:
+
+### 🕒 Meeting Timeline & Participants
+- **Date & Time:** ${meetingDate}
+- **Duration:** ~${durationMinutes} minute(s)
+- **Participants:** ${participantNames.join(', ')}
+
 ### 📌 Meeting Summary
 [A concise paragraph summarizing the entire conversation or speech]
 

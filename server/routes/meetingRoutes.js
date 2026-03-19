@@ -3,6 +3,8 @@ import axios from "axios";
 import authMiddleware from "../middleware/auth.js";
 import MeetingRecord from "../models/MeetingRecord.js";
 import MeetingTranscript from "../models/MeetingTranscript.js";
+import ScheduledMeeting from "../models/ScheduledMeeting.js";
+import User from "../models/User.js";
 import { addMomJob } from "../services/momQueue.js";
 import multer from "multer";
 import os from "os";
@@ -40,6 +42,35 @@ router.post("/create", authMiddleware, async (req, res) => {
             });
         }
 
+        // --- ENFORCE SCHEDULED MEETING ACCESS ---
+        const now = new Date();
+        const activeSchedule = await ScheduledMeeting.findOne({
+            roomName: roomId,
+            startTime: { $lte: now },
+            endTime: { $gte: now },
+            status: { $in: ['Scheduled', 'Active'] }
+        });
+
+        let isLeader = false;
+        let scheduledMeetingId = null;
+
+        if (activeSchedule) {
+            // Check authorization
+            isLeader = activeSchedule.leader.toString() === req.userData.userId;
+            const isAuth = isLeader || activeSchedule.participants.some(p => p.toString() === req.userData.userId);
+
+            if (!isAuth) {
+                return res.status(403).json({
+                    error: "This room is currently reserved for a scheduled meeting that you are not part of."
+                });
+            } else if (activeSchedule.status === 'Scheduled') {
+                activeSchedule.status = 'Active';
+                await activeSchedule.save();
+            }
+            scheduledMeetingId = activeSchedule._id;
+        }
+        // ----------------------------------------
+
         // Unique room name
         const livekitRoomName = `meta-${roomId}`;
 
@@ -55,6 +86,8 @@ router.post("/create", authMiddleware, async (req, res) => {
             token: token,
             url: LIVEKIT_URL,
             roomName: livekitRoomName,
+            isLeader,
+            scheduledMeetingId
         });
     } catch (error) {
         console.error("LiveKit error:", error.message);
@@ -126,6 +159,24 @@ router.post("/leave", authMiddleware, async (req, res) => {
             // Store duration in seconds instead of milliseconds for readibility
             record.duration = Math.floor((record.leaveTime - record.joinTime) / 1000);
             await record.save();
+
+            // --- END SCHEDULED MEETING IF LEADER LEAVES ---
+            // MeetingRecord.roomName may contain the 'meta-' prefix from LiveKit.
+            const scheduledRoomName = record.roomName.startsWith("meta-") 
+                ? record.roomName.substring(5) 
+                : record.roomName;
+
+            const activeSchedule = await ScheduledMeeting.findOne({
+                roomName: scheduledRoomName,
+                leader: req.userData.userId,
+                status: 'Active'
+            });
+            if (activeSchedule) {
+                activeSchedule.status = 'Ended';
+                activeSchedule.endTime = new Date();
+                await activeSchedule.save();
+            }
+            // ----------------------------------------------
         }
 
         return res.json({ message: "Meeting leave recorded", duration: record.duration });
@@ -218,6 +269,110 @@ router.post("/:recordId/generate-mom", authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("MOM generation error:", error);
         return res.status(500).json({ error: "Failed to start MOM generation" });
+    }
+});
+
+// ================================
+// Scheduled Meetings
+// ================================
+
+router.get("/locked-zones", authMiddleware, async (req, res) => {
+    try {
+        const now = new Date();
+        const rawSchedules = await ScheduledMeeting.find({
+            startTime: { $lte: now },
+            endTime: { $gte: now },
+            status: { $in: ['Scheduled', 'Active'] }
+        });
+
+        const blockedZones = [];
+        for (const schedule of rawSchedules) {
+            const leaderUser = await User.findById(schedule.leader);
+            const isLeaderOnline = leaderUser && !!leaderUser.activeSocketId;
+            
+            if (isLeaderOnline) {
+                const isLeader = schedule.leader.toString() === req.userData.userId;
+                const isParticipant = schedule.participants.some(p => p.toString() === req.userData.userId);
+                if (!isLeader && !isParticipant) {
+                    blockedZones.push(schedule.roomName);
+                }
+            }
+        }
+        return res.json({ blockedZones });
+    } catch (e) {
+        console.error("Locked zones fetch error:", e);
+        return res.status(500).json({ error: "Failed to fetch locked zones" });
+    }
+});
+
+router.post("/schedule", authMiddleware, async (req, res) => {
+    try {
+        const { roomName, startTime, endTime, participantIds } = req.body;
+        const leaderId = req.userData.userId;
+
+        if (!roomName || !startTime || !endTime || !participantIds) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const scheduledMeeting = new ScheduledMeeting({
+            leader: leaderId,
+            roomName: roomName,
+            startTime: new Date(startTime),
+            endTime: new Date(endTime),
+            participants: participantIds,
+            status: 'Scheduled'
+        });
+
+        await scheduledMeeting.save();
+
+        // Optional: Emit real-time socket events for UI notification
+        const io = req.app.get("io");
+        if (io) {
+            const leaderUser = await User.findById(leaderId);
+            const leaderUsername = leaderUser ? leaderUser.username : "Team Leader";
+
+            // Note: Since sockets are linked to user instances via mapping (outside of standard req),
+            // we broadcast the invite so the clients can filter and alert if they are in the participantIds
+            io.emit("meeting_invite", {
+                roomName,
+                startTime,
+                leaderUsername,
+                participantIds
+            });
+        }
+
+        return res.json({ message: "Meeting scheduled successfully", meeting: scheduledMeeting });
+    } catch (error) {
+        console.error("Schedule meeting error:", error);
+        return res.status(500).json({ error: "Failed to schedule meeting" });
+    }
+});
+
+router.post("/extend", authMiddleware, async (req, res) => {
+    try {
+        const { scheduledMeetingId, extraMinutes } = req.body;
+
+        if (!scheduledMeetingId || !extraMinutes) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const meeting = await ScheduledMeeting.findById(scheduledMeetingId);
+        if (!meeting) return res.status(404).json({ error: "Scheduled meeting not found" });
+
+        // Verify caller is leader
+        if (meeting.leader.toString() !== req.userData.userId) {
+            return res.status(403).json({ error: "Only the leader can extend this meeting" });
+        }
+
+        // Add minutes to endTime
+        const newEndTime = new Date(meeting.endTime.getTime() + extraMinutes * 60000);
+        meeting.endTime = newEndTime;
+        await meeting.save();
+
+        return res.json({ message: "Meeting extended", newEndTime: meeting.endTime });
+    } catch (error) {
+        console.error("Extend meeting error:", error);
+        return res.status(500).json({ error: "Failed to extend meeting time" });
     }
 });
 
