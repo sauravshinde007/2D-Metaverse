@@ -63,6 +63,7 @@ const ScheduleModal = ({ zone, onClose, onSuccess }) => {
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
+            window.dispatchEvent(new CustomEvent('meeting-scheduled')); // <-- ADDED EVENT TO UPDATE CALENDAR
             onSuccess();
         } catch (err) {
             setError(err.response?.data?.error || "Failed to schedule meeting.");

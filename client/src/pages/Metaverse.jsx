@@ -55,7 +55,7 @@ function Metaverse() {
                 <ServerStats />
 
                 {/* Debug FPS Counter */}
-                {/* <FPSCounter /> */}
+                <FPSCounter />
 
                 {/* Manual Zoom Controls */}
                 <ZoomControls />

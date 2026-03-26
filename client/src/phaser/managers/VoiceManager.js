@@ -165,7 +165,7 @@ export default class VoiceManager {
 
         Object.assign(vid.style, {
             position: 'absolute',
-            width: '80px', height: '60px',
+            width: '60px', height: '60px',
             objectFit: 'cover',
             borderRadius: '8px',
             border: '2px solid #9b99fe',
@@ -213,7 +213,7 @@ export default class VoiceManager {
             const screenX = (player.x - camera.worldView.x) * zoom;
             const screenY = (player.y - camera.worldView.y) * zoom;
 
-            const baseW = 80; const baseH = 60; const baseVOffset = 50;
+            const baseW = 60; const baseH = 60; const baseVOffset = 50;
 
             const curW = baseW * zoom;
             const curH = baseH * zoom;

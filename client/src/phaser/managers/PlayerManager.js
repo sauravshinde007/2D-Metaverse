@@ -40,6 +40,23 @@ export default class PlayerManager {
             console.log("Meeting status changed. Active:", this.isInMeeting);
         });
 
+        // Teleport Event Listener
+        window.addEventListener("teleport-player", (e) => {
+            if (!this.player) return;
+            const { zoneId } = e.detail;
+            const zone = this.mapManager.restrictedZones.find(z => z.id === zoneId);
+            if (zone) {
+                this.scene.tweens.killTweensOf(this.player);
+                this.player.x = zone.x + zone.width / 2;
+                this.player.y = zone.y + zone.height / 2 + 10; // offset slightly down
+                // Brief glow effect on teleport
+                const fx = this.player.preFX.addGlow(0x00ffff, 4, 0, false, 0.1, 10);
+                this.scene.time.delayedCall(1000, () => {
+                    if (this.player && this.player.preFX) this.player.preFX.remove(fx);
+                });
+            }
+        });
+
         // Poll for dynamic room locks (every 5 seconds)
         this.lockedZonesInterval = setInterval(async () => {
             const token = localStorage.getItem("token");

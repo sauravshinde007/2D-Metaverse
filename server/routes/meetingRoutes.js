@@ -310,7 +310,9 @@ import Notification from "../models/Notification.js";
 router.get("/notifications", authMiddleware, async (req, res) => {
     try {
         const userId = req.userData.userId;
-        const notifications = await Notification.find({ user: userId }).sort({ createdAt: -1 });
+        const notifications = await Notification.find({ user: userId })
+            .populate('relatedId')
+            .sort({ createdAt: -1 });
         return res.json({ notifications });
     } catch (error) {
         console.error("Fetch notifications error:", error);
@@ -422,6 +424,20 @@ router.post("/extend", authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("Extend meeting error:", error);
         return res.status(500).json({ error: "Failed to extend meeting time" });
+    }
+});
+
+router.get("/scheduled", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userData.userId;
+        const meetings = await ScheduledMeeting.find({
+            $or: [{ leader: userId }, { participants: userId }]
+        }).populate('leader', 'username'); // Optional: populate to get leader's name
+        
+        return res.json({ meetings });
+    } catch (error) {
+        console.error("Fetch scheduled meetings error:", error);
+        return res.status(500).json({ error: "Failed to fetch scheduled meetings" });
     }
 });
 

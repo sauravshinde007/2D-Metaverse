@@ -15,7 +15,8 @@ const NotificationSchema = new mongoose.Schema({
         default: 'meeting_invite'
     },
     relatedId: {
-        type: mongoose.Schema.Types.ObjectId, // Could be ScheduledMeeting _id
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ScheduledMeeting',
         default: null
     },
     seen: {

@@ -595,45 +595,66 @@ export default function UserSettingsModal({ isOpen, onClose, onNotificationsView
                                                 )}
                                             </div>
 
-                                            {viewMomContent && (
-                                                <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-xl relative">
-                                                    <button onClick={() => setViewMomContent(null)} className="absolute top-4 right-4 p-1.5 bg-white border border-gray-200 rounded-md text-gray-500 hover:text-gray-900 shadow-sm transition-colors">
-                                                        <X size={14} />
-                                                    </button>
-                                                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                                        <FileText size={16} className="text-[#136c50]" /> Minutes of Meeting
-                                                    </h3>
-                                                    <div className="text-sm text-gray-700 leading-relaxed max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
-                                                        <ReactMarkdown
-                                                            components={{
-                                                                h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-4 mt-2 text-gray-900" {...props} />,
-                                                                h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-3 mt-6 text-gray-800" {...props} />,
-                                                                h3: ({ node, ...props }) => <h3 className="text-md font-semibold mb-2 mt-4 text-gray-800" {...props} />,
-                                                                ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
-                                                                ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-4 space-y-1" {...props} />,
-                                                                li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                                                                p: ({ node, ...props }) => <p className="mb-4 last:mb-0" {...props} />,
-                                                                strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
-                                                                em: ({ node, ...props }) => <em className="italic text-gray-600" {...props} />
-                                                            }}
-                                                        >
-                                                            {viewMomContent}
-                                                        </ReactMarkdown>
-                                                    </div>
-                                                </div>
-                                            )}
+                                            {/* Dialog Box Modal for Transcript & MOM */}
+                                            {(viewMomContent || viewTranscriptContent) && (
+                                                <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                                        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden relative"
+                                                    >
+                                                        {/* Header */}
+                                                        <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50/80">
+                                                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                                                <FileText size={20} className={viewMomContent ? "text-[#136c50]" : "text-gray-700"} />
+                                                                {viewMomContent ? "Minutes of Meeting" : "Full Meeting Transcript"}
+                                                            </h3>
+                                                            <button 
+                                                                onClick={() => { setViewMomContent(null); setViewTranscriptContent(null); }} 
+                                                                className="p-1.5 bg-white border border-gray-200 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 shadow-sm transition-colors"
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        </div>
 
-                                            {viewTranscriptContent && (
-                                                <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-xl relative">
-                                                    <button onClick={() => setViewTranscriptContent(null)} className="absolute top-4 right-4 p-1.5 bg-white border border-gray-200 rounded-md text-gray-500 hover:text-gray-900 shadow-sm transition-colors">
-                                                        <X size={14} />
-                                                    </button>
-                                                    <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                                        <FileText size={16} className="text-gray-700" /> Full Meeting Transcript
-                                                    </h3>
-                                                    <div className="text-sm text-gray-700 leading-relaxed max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 whitespace-pre-wrap">
-                                                        {viewTranscriptContent}
-                                                    </div>
+                                                        {/* Scrollable Content */}
+                                                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+                                                            {viewMomContent ? (
+                                                                <div className="text-sm text-gray-700 leading-relaxed">
+                                                                    <ReactMarkdown
+                                                                        components={{
+                                                                            h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-4 mt-2 text-gray-900" {...props} />,
+                                                                            h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-3 mt-6 text-gray-800" {...props} />,
+                                                                            h3: ({ node, ...props }) => <h3 className="text-md font-semibold mb-2 mt-4 text-gray-800" {...props} />,
+                                                                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                                                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-4 space-y-1" {...props} />,
+                                                                            li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+                                                                            p: ({ node, ...props }) => <p className="mb-4 last:mb-0" {...props} />,
+                                                                            strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+                                                                            em: ({ node, ...props }) => <em className="italic text-gray-600" {...props} />
+                                                                        }}
+                                                                    >
+                                                                        {viewMomContent}
+                                                                    </ReactMarkdown>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                                                    {viewTranscriptContent}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Footer Action */}
+                                                        <div className="p-5 border-t border-gray-100 bg-gray-50/80 flex justify-end">
+                                                            <button 
+                                                                onClick={() => { setViewMomContent(null); setViewTranscriptContent(null); }} 
+                                                                className="px-5 py-2.5 font-medium text-white bg-black rounded-xl hover:bg-gray-800 transition-colors shadow-sm text-sm"
+                                                            >
+                                                                Close
+                                                            </button>
+                                                        </div>
+                                                    </motion.div>
                                                 </div>
                                             )}
                                         </div>
@@ -667,12 +688,25 @@ export default function UserSettingsModal({ isOpen, onClose, onNotificationsView
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                {!notification.seen && (
-                                                                    <div className="flex items-center gap-2 shrink-0">
-                                                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                                                                        <span className="text-[12px] font-bold text-blue-600">New</span>
-                                                                    </div>
-                                                                )}
+                                                                <div className="flex items-center gap-3 shrink-0">
+                                                                    {!notification.seen && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                                                            <span className="text-[12px] font-bold text-blue-600">New</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {notification.relatedId && notification.relatedId.roomName && (
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                window.dispatchEvent(new CustomEvent('teleport-player', { detail: { zoneId: notification.relatedId.roomName } }));
+                                                                                onClose();
+                                                                            }}
+                                                                            className="px-3 py-1.5 text-[12px] font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors shadow-sm flex items-center gap-1.5"
+                                                                        >
+                                                                            Teleport
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     ))
