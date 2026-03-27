@@ -69,11 +69,11 @@ export const momWorker = new Worker('momQueue', async job => {
                     const wavPath = fullPath.replace('.webm', '.wav');
 
                     try {
-                        // Convert to WAV 16kHz Mono
+                        // Convert to WAV 16kHz PCM
                         await new Promise((resolve, reject) => {
                             ffmpeg(fullPath)
                                 .audioFrequency(16000)
-                                .audioChannels(1)
+                                .audioCodec('pcm_s16le')
                                 .format('wav')
                                 .on('end', resolve)
                                 .on('error', reject)
@@ -85,7 +85,6 @@ export const momWorker = new Worker('momQueue', async job => {
                             file: stream,
                             model: "whisper-large-v3",
                             prompt: previousWhisperContext,
-                            temperature: 0.2,
                             language: "en"
                         });
 
