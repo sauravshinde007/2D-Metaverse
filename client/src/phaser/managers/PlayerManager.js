@@ -1,5 +1,6 @@
 
 import Phaser from "phaser";
+import socketService from "../../services/socketService";
 
 export default class PlayerManager {
     constructor(scene, inputManager, mapManager) {
@@ -32,12 +33,22 @@ export default class PlayerManager {
         this.currentInteractable = null;
 
         this.isInMeeting = false;
+        this.isUsingComputer = false;
 
         // Events
         this.scene.events.on("gameInput", (input) => this.handleGameInput(input));
         window.addEventListener("meeting-status-change", (e) => {
             this.isInMeeting = e.detail.active;
             console.log("Meeting status changed. Active:", this.isInMeeting);
+        });
+
+        window.addEventListener("close-computer", () => {
+            this.isUsingComputer = false;
+            socketService.emitWorking(false);
+            if (this.player) {
+               this.setWorkingStatus(this.player, false, true);
+            }
+            console.log("🖥️ Computer interaction closed");
         });
 
         // Teleport Event Listener
@@ -153,6 +164,10 @@ export default class PlayerManager {
 
         this.players[id] = container;
         this.playerUsernames.set(id, data.username);
+
+        if (data.isWorking) {
+            this.setWorkingStatus(container, true, false);
+        }
     }
 
     removePlayer(id) {
@@ -256,10 +271,29 @@ export default class PlayerManager {
                 }
             }
 
-            // 2. Computers -> Trigger Computer UI (Placeholder)
+            // 2. Computers -> Trigger Computer UI
             else if (interactable.type === 'computer') {
                 console.log("🖥️ Computer interaction triggered");
-                // window.dispatchEvent(new CustomEvent('open-computer', { ... }));
+                
+                // Determine facing direction from custom property "dir"
+                const dirProp = interactable.rawProperties && interactable.rawProperties.find(p => p.name === "dir");
+                const computerDir = dirProp ? dirProp.value : "down";
+                
+                let playerFacing = "up";
+                if (computerDir === "down") playerFacing = "up";
+                else if (computerDir === "up") playerFacing = "down";
+                else if (computerDir === "left") playerFacing = "right";
+                else if (computerDir === "right") playerFacing = "left";
+
+                this.currentAnimation = `idle-${playerFacing}`;
+                this.lastDirection = playerFacing;
+                this.player.anims.play(this.currentAnimation, true);
+                this.player.body.setVelocity(0);
+                
+                this.isUsingComputer = true;
+                socketService.emitWorking(true);
+                this.setWorkingStatus(this.player, true, true);
+                window.dispatchEvent(new CustomEvent('open-computer'));
             }
         }
     }
@@ -268,7 +302,7 @@ export default class PlayerManager {
         if (!this.player || !this.player.body) return;
 
         // Chat Focus check
-        if (this.inputManager.chatFocused) {
+        if (this.inputManager.chatFocused || this.isUsingComputer) {
             this.player.body.setVelocity(0);
             return;
         }
@@ -465,6 +499,46 @@ export default class PlayerManager {
             ease: "Power1",
             onComplete: () => emojiText.destroy()
         });
+    }
+
+    setWorkingStatus(entity, isWorking, isLocalPlayer) {
+        if (!entity) return;
+
+        if (isWorking) {
+            if (!entity.workingText) {
+                const text = this.scene.add.text(0, -48, "Working...", {
+                    fontFamily: 'Inter',
+                    fontSize: "10px", fill: "#60a5fa", fontStyle: "bold",
+                    backgroundColor: "#000000cc", padding: { x: 5, y: 3 }
+                }).setOrigin(0.5).setResolution(2);
+                
+                if (isLocalPlayer) {
+                    text.setPosition(entity.x, entity.y - 48);
+                    text.setDepth(100);
+                } else {
+                    text.setPosition(0, -48);
+                    entity.add(text);
+                    text.setDepth(100); // Set high depth to ensure it stays on top
+                    entity.setDepth(6); // Bump container depth slightly when working
+                }
+                entity.workingText = text;
+            }
+            entity.workingText.setVisible(true);
+            
+            this.scene.tweens.add({
+                targets: entity.workingText,
+                alpha: 0.5,
+                yoyo: true,
+                repeat: -1,
+                duration: 800
+            });
+        } else {
+            if (entity.workingText) {
+                this.scene.tweens.killTweensOf(entity.workingText);
+                entity.workingText.destroy();
+                entity.workingText = null;
+            }
+        }
     }
 
     // --- Mobile Joystick ---

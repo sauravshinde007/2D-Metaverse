@@ -175,6 +175,14 @@ export default (io) => {
       io.emit("playerReaction", { id: socket.id, emoji });
     });
 
+    // Broadcast working status
+    socket.on("working", (isWorking) => {
+      const p = players[socket.id];
+      if (!p) return;
+      p.isWorking = !!isWorking;
+      socket.broadcast.emit("playerWorking", { id: socket.id, isWorking: p.isWorking });
+    });
+
     socket.on("disconnect", async () => {
       const p = players[socket.id];
       if (!p) {

@@ -81,6 +81,10 @@ const socketService = {
     socket?.emit("reaction", emoji);
   },
 
+  emitWorking(isWorking) {
+    socket?.emit("working", isWorking);
+  },
+
   // ====== LISTEN EVENTS ======
   onPlayers(callback) {
     socket?.on("players", callback);
@@ -88,6 +92,10 @@ const socketService = {
 
   onPlayerReaction(callback) {
     socket?.on("playerReaction", callback);
+  },
+
+  onPlayerWorking(callback) {
+    socket?.on("playerWorking", callback);
   },
 
   onPlayerJoined(callback) {
