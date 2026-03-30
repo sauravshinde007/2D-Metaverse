@@ -46,7 +46,7 @@ export default class PlayerManager {
             this.isUsingComputer = false;
             socketService.emitWorking(false);
             if (this.player) {
-               this.setWorkingStatus(this.player, false, true);
+                this.setWorkingStatus(this.player, false, true);
             }
             console.log("🖥️ Computer interaction closed");
         });
@@ -82,7 +82,7 @@ export default class PlayerManager {
                     this.mapManager.dynamicBlockedZones = data.blockedZones;
                     this.mapManager.updateZoneVisuals(this.player ? this.player.role : 'employee');
                 }
-            } catch (err) {}
+            } catch (err) { }
         }, 5000);
     }
 
@@ -140,33 +140,60 @@ export default class PlayerManager {
     addOtherPlayer(id, data) {
         if (this.players[id]) this.players[id].destroy();
 
-        const sprite = this.scene.add.sprite(0, 0, "ash");
-        const nameText = this.scene.add.text(0, -30, data.username, {
-            fontFamily: 'Inter',
-            fontSize: "14px", fill: "#ffffff", fontStyle: "bold",
-            stroke: "#000000", strokeThickness: 3,
-        })
-            .setOrigin(0.5)
-            .setResolution(2);
+        // Create a wrapper object that mimics a Phaser object with x/y properties
+        const remotePlayer = {
+            scene: this.scene,
+            _x: data.x,
+            _y: data.y,
+            sprite: this.scene.add.sprite(data.x, data.y, "ash"),
+            nameText: this.scene.add.text(data.x, data.y - 30, data.username, {
+                fontFamily: 'Inter',
+                fontSize: "14px", fill: "#ffffff", fontStyle: "bold",
+                stroke: "#000000", strokeThickness: 3,
+            }).setOrigin(0.5).setResolution(2),
+            workingText: null,
 
-        const container = this.scene.add.container(data.x, data.y, [sprite, nameText]);
+            get x() { return this._x; },
+            set x(val) {
+                this._x = val;
+                this.sprite.x = val;
+                this.nameText.x = val;
+                if (this.workingText) this.workingText.x = val;
+            },
+
+            get y() { return this._y; },
+            set y(val) {
+                this._y = val;
+                this.sprite.y = val;
+                this.nameText.y = val - 30;
+                if (this.workingText) this.workingText.y = val - 48;
+            },
+
+            destroy() {
+                this.sprite.destroy();
+                this.nameText.destroy();
+                if (this.workingText) this.workingText.destroy();
+            }
+        };
 
         // Glow
-        const remoteGlow = sprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
+        const remoteGlow = remotePlayer.sprite.preFX.addGlow(0xffffff, 4, 0, false, 0.1, 10);
         remoteGlow.setActive(false);
-        sprite.setInteractive();
-        sprite.on('pointerover', () => remoteGlow.setActive(true));
-        sprite.on('pointerout', () => remoteGlow.setActive(false));
+        remotePlayer.sprite.setInteractive();
+        remotePlayer.sprite.on('pointerover', () => remoteGlow.setActive(true));
+        remotePlayer.sprite.on('pointerout', () => remoteGlow.setActive(false));
 
-        container.setDepth(5);
-        if (data.anim) sprite.anims.play(data.anim, true);
-        else sprite.setFrame(18);
+        remotePlayer.sprite.setDepth(5);
+        remotePlayer.nameText.setDepth(6);
+        
+        if (data.anim) remotePlayer.sprite.anims.play(data.anim, true);
+        else remotePlayer.sprite.setFrame(18);
 
-        this.players[id] = container;
+        this.players[id] = remotePlayer;
         this.playerUsernames.set(id, data.username);
 
         if (data.isWorking) {
-            this.setWorkingStatus(container, true, false);
+            this.setWorkingStatus(remotePlayer, true, false);
         }
     }
 
@@ -179,18 +206,17 @@ export default class PlayerManager {
     }
 
     moveRemotePlayer(id, pos, anim) {
-        const container = this.players[id];
-        if (container) {
-            this.scene.tweens.killTweensOf(container); // Prevent overlaps from building up!
+        const remotePlayer = this.players[id];
+        if (remotePlayer) {
+            this.scene.tweens.killTweensOf(remotePlayer); // Prevent overlaps from building up!
             this.scene.tweens.add({
-                targets: container,
+                targets: remotePlayer,
                 x: pos.x,
                 y: pos.y,
                 duration: 120,
                 ease: "Linear",
             });
-            const sprite = container.getAt(0);
-            if (anim && sprite.anims) sprite.anims.play(anim, true);
+            if (anim && remotePlayer.sprite.anims) remotePlayer.sprite.anims.play(anim, true);
         }
     }
 
@@ -274,11 +300,11 @@ export default class PlayerManager {
             // 2. Computers -> Trigger Computer UI
             else if (interactable.type === 'computer') {
                 console.log("🖥️ Computer interaction triggered");
-                
+
                 // Determine facing direction from custom property "dir"
                 const dirProp = interactable.rawProperties && interactable.rawProperties.find(p => p.name === "dir");
                 const computerDir = dirProp ? dirProp.value : "down";
-                
+
                 let playerFacing = "up";
                 if (computerDir === "down") playerFacing = "up";
                 else if (computerDir === "up") playerFacing = "down";
@@ -289,11 +315,13 @@ export default class PlayerManager {
                 this.lastDirection = playerFacing;
                 this.player.anims.play(this.currentAnimation, true);
                 this.player.body.setVelocity(0);
-                
+
                 this.isUsingComputer = true;
                 socketService.emitWorking(true);
                 this.setWorkingStatus(this.player, true, true);
-                window.dispatchEvent(new CustomEvent('open-computer'));
+                window.dispatchEvent(new CustomEvent('open-computer', { 
+                    detail: { computerId: interactable.id || `computer_${interactable.x}_${interactable.y}` } 
+                }));
             }
         }
     }
@@ -506,25 +534,16 @@ export default class PlayerManager {
 
         if (isWorking) {
             if (!entity.workingText) {
-                const text = this.scene.add.text(0, -48, "Working...", {
+                const text = this.scene.add.text(entity.x, entity.y - 48, "Working...", {
                     fontFamily: 'Inter',
                     fontSize: "10px", fill: "#60a5fa", fontStyle: "bold",
                     backgroundColor: "#000000cc", padding: { x: 5, y: 3 }
-                }).setOrigin(0.5).setResolution(2);
-                
-                if (isLocalPlayer) {
-                    text.setPosition(entity.x, entity.y - 48);
-                    text.setDepth(100);
-                } else {
-                    text.setPosition(0, -48);
-                    entity.add(text);
-                    text.setDepth(100); // Set high depth to ensure it stays on top
-                    entity.setDepth(6); // Bump container depth slightly when working
-                }
+                }).setOrigin(0.5).setResolution(2).setDepth(100);
+
                 entity.workingText = text;
             }
             entity.workingText.setVisible(true);
-            
+
             this.scene.tweens.add({
                 targets: entity.workingText,
                 alpha: 0.5,

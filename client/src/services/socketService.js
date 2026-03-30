@@ -85,6 +85,18 @@ const socketService = {
     socket?.emit("working", isWorking);
   },
 
+  emitCheckComputer(computerId) {
+    socket?.emit("checkComputer", computerId);
+  },
+
+  emitStartComputerScreen(computerId, peerId) {
+    socket?.emit("startComputerScreen", { computerId, peerId });
+  },
+
+  emitStopComputerScreen(computerId) {
+    socket?.emit("stopComputerScreen", computerId);
+  },
+
   // ====== LISTEN EVENTS ======
   onPlayers(callback) {
     socket?.on("players", callback);
@@ -124,6 +136,18 @@ const socketService = {
 
   onGameRules(callback) {
     socket?.on("gameRules", callback);
+  },
+
+  onComputerScreenState(callback) {
+    socket?.on("computerScreenState", callback);
+  },
+
+  onComputerScreenStarted(callback) {
+    socket?.on("computerScreenStarted", callback);
+  },
+
+  onComputerScreenStopped(callback) {
+    socket?.on("computerScreenStopped", callback);
   },
 
   removeAllListeners() {
