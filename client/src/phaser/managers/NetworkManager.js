@@ -2,6 +2,7 @@
 import socketService from "../../services/socketService";
 import peerService from "../../services/peerService";
 import Phaser from "phaser";
+import { QuadTree } from "../utils/QuadTree";
 
 export default class NetworkManager {
     constructor(scene, playerManager, mapManager, voiceManager) {
@@ -205,13 +206,13 @@ export default class NetworkManager {
     update(currTime) {
         // Throttled nearby update
         if (currTime - this.lastNearbyPlayersUpdate >= this.nearbyPlayersUpdateInterval) {
-            const nearby = this.getNearbyPlayersToEmit(150);
+            const nearby = this.getNearbyPlayersToEmit(150, 200);
             socketService.emitNearbyPlayers({ nearbyPlayers: nearby });
             this.lastNearbyPlayersUpdate = currTime;
         }
     }
 
-    getNearbyPlayersToEmit(radius) {
+    getNearbyPlayersToEmit(innerRadius, outerRadius = 150) {
         // We rely on map manager for raycaster
         // This duplicates World.js logic but uses managers
         const players = this.playerManager.players;
@@ -226,37 +227,57 @@ export default class NetworkManager {
 
         const nearbyPlayers = [];
 
-        // Fallback if no raycaster or complex check
-        // Note: We need access to map boundaries / obstacles.
-        // Creating rays requires the raycaster plugin instance.
+        // 1. Rigid Proximity Box Filter (Spatial Partitioning via QuadTree)
+        // Ensure QuadTree handles points across map boundaries dynamically.
+        const mapWidth = this.mapManager?.map?.widthInPixels || 3200;
+        const mapHeight = this.mapManager?.map?.heightInPixels || 3200;
+        
+        // Boundary is defined by its center (x, y) and half-widths (w, h)
+        const boundary = { 
+            x: mapWidth / 2, 
+            y: mapHeight / 2, 
+            w: mapWidth / 2, 
+            h: mapHeight / 2 
+        };
+        const qt = new QuadTree(boundary, 4);
+
+        // Insert all active players into QuadTree
+        Object.keys(players).forEach(id => {
+            const other = players[id];
+            qt.insert({ x: other.x, y: other.y, id, other });
+        });
+
+        // Query QuadTree with a strict rigid rectangular proximity box using the maximum radius
+        const queryRange = { 
+            x: myPlayer.x, 
+            y: myPlayer.y, 
+            w: outerRadius, 
+            h: outerRadius 
+        };
+        
+        const candidatePoints = qt.query(queryRange);
+        const candidates = [];
+
+        // Exact distance check for the subset of points gathered by the QuadTree (Hysteresis applied)
+        candidatePoints.forEach(p => {
+            const dist = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, p.other.x, p.other.y);
+            
+            // Hysteresis: Use the outer radius if they are already connected, otherwise inner radius
+            const isCurrentlyConnected = this.currentNearbyPlayers.has(p.id);
+            const appliedRadius = isCurrentlyConnected ? outerRadius : innerRadius;
+
+            if (dist <= appliedRadius) {
+                candidates.push({ id: p.id, other: p.other, dist });
+            }
+        });
 
         if (!raycaster) {
-            Object.keys(players).forEach((id) => {
-                const other = players[id];
-                const distance = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, other.x, other.y);
-                if (distance <= radius) {
-                    // accessing 'other.list[1].text' for username might be fragile if structure changes
-                    const username = this.playerManager.playerUsernames.get(id);
-                    nearbyPlayers.push({ id, username, x: other.x, y: other.y, distance: Math.round(distance) });
-                }
+            candidates.forEach(cand => {
+                const username = this.playerManager.playerUsernames.get(cand.id);
+                nearbyPlayers.push({ id: cand.id, username, x: cand.other.x, y: cand.other.y, distance: Math.round(cand.dist) });
             });
             return nearbyPlayers;
         }
-
-        // Raycaster logic
-        // Efficient Raycaster Logic:
-        // 1. Filter by distance first (cheap)
-        // 2. Raycast only to those candidates (expensive but fewer)
-
-        // 1. Distance Filter
-        const candidates = [];
-        Object.keys(players).forEach(id => {
-            const other = players[id];
-            const dist = Phaser.Math.Distance.Between(myPlayer.x, myPlayer.y, other.x, other.y);
-            if (dist <= radius) {
-                candidates.push({ id, other, dist });
-            }
-        });
 
         if (candidates.length === 0) return [];
 

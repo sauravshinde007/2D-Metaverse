@@ -1,0 +1,15 @@
+{
+  "name": "metaverse-testing-suite",
+  "version": "1.0.0",
+  "description": "Comprehensive Test Suite for the 2D Metaverse",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest",
+    "test:coverage": "node --experimental-vm-modules ./node_modules/.bin/jest --coverage",
+    "test:unit": "node --experimental-vm-modules ./node_modules/.bin/jest ./unit",
+    "test:integration": "node --experimental-vm-modules ./node_modules/.bin/jest ./integration"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
